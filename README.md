@@ -14,7 +14,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-	implementation 'com.github.RelinRan:SwipeRecyclerView:2021.12.25.1'
+	implementation 'com.github.RelinRan:SwipeRecyclerView:2021.12.25.2'
 }
 ```
 ## 使用方法
