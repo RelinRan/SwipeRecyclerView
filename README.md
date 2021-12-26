@@ -33,6 +33,7 @@ rv_content.setLayoutManager(new LinearLayoutManager(context));
 rv_content.setLongPressDragEnabled(true);
 //设置可以侧滑显示菜单
 rv_content.setSwipeMenuEnable(true);
+//继承RecyclerAdapter实现的SwipeAdapter
 SwipeAdapter adapter = new SwipeAdapter(this);
 adapter.setOnItemClickListener(new SwipeItemClick());
 rv_content.setAdapter(adapter);
@@ -52,6 +53,7 @@ private class SwipeItemClick implements RecyclerAdapter.OnItemClickListener<Stri
 }
 ```
 ### 3.侧滑菜单 + itemView
+注意：必须继承 RecyclerAdapter重写getItemSwipeMenuLayoutResId() 和 getItemLayoutResId();
 ```
     private class SwipeAdapter extends RecyclerAdapter<String> {
 
