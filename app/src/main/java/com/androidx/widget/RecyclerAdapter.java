@@ -10,7 +10,6 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,13 +37,26 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * View容器
      */
     private ViewHolder viewHolder;
-    private RecyclerView.LayoutManager layoutManager;
+    /**
+     * 是否有侧滑菜单
+     */
     private boolean hasSwipeMenu;
+    /**
+     * 侧滑LayoutId
+     */
     private final int ID_SWIPE_ITEM_LAYOUT = 0x100;
+    /**
+     * 侧滑ItemViewId
+     */
     private final int ID_SWIPE_ITEM_VIEW = 0x101;
+    /**
+     * 侧滑菜单LayoutId
+     */
     private final int ID_SWIPE_MENU_LAYOUT = 0x200;
+    /**
+     * 侧滑菜单ViewId
+     */
     private final int ID_SWIPE_MENU_VIEW = 0x201;
-
 
     public RecyclerAdapter(Context context) {
         this.context = context;
@@ -85,18 +97,42 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
         return 0;
     }
 
+    /**
+     * 找到侧滑ItemLayout
+     *
+     * @param childView
+     * @return
+     */
     public View findSwipeItemLayout(View childView) {
         return childView.findViewById(ID_SWIPE_ITEM_LAYOUT);
     }
 
+    /**
+     * 找到侧滑ItemView
+     *
+     * @param childView
+     * @return
+     */
     public View findSwipeItemView(View childView) {
         return childView.findViewById(ID_SWIPE_ITEM_VIEW);
     }
 
+    /**
+     * 找到侧滑菜单
+     *
+     * @param childView
+     * @return
+     */
     public View findSwipeMenuLayout(View childView) {
         return childView.findViewById(ID_SWIPE_MENU_LAYOUT);
     }
 
+    /**
+     * 找到侧滑菜单View
+     *
+     * @param childView
+     * @return
+     */
     public View findSwipeMenuView(View childView) {
         return childView.findViewById(ID_SWIPE_MENU_VIEW);
     }
@@ -183,7 +219,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public int getItemCount() {
-        int itemCount = data==null?0:data.size();
+        int itemCount = data == null ? 0 : data.size();
         if (emptyView != null) {
             emptyView.setVisibility(itemCount == 0 ? View.VISIBLE : View.GONE);
         }
