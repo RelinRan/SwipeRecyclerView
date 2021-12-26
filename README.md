@@ -1,6 +1,5 @@
 # SwipeRecyclerView
-1.支持侧滑菜单
-2.支持长按拖拽
+支持侧滑菜单、长按拖拽、Header、Footer
 ## Maven
 1.build.grade
 ```
@@ -14,7 +13,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-	implementation 'com.github.RelinRan:SwipeRecyclerView:2021.12.25.2'
+	implementation 'com.github.RelinRan:SwipeRecyclerView:2021.12.26.1'
 }
 ```
 ## 使用方法
@@ -55,34 +54,67 @@ private class SwipeItemClick implements RecyclerAdapter.OnItemClickListener<Stri
 ### 3.侧滑菜单 + itemView
 注意：必须继承 RecyclerAdapter重写getItemSwipeMenuLayoutResId() 和 getItemLayoutResId();
 ```
-    private class SwipeAdapter extends RecyclerAdapter<String> {
+    private class ItemAdapter extends RecyclerAdapter<String> {
 
         public ItemAdapter(Context context) {
             super(context);
         }
 
         @Override
-        protected int getItemSwipeMenuLayoutResId(int viewType) {
-            //菜单布局
+        public int getHeaderLayoutResId() {
+            //TODO:头部布局
+            return R.layout.androidx_item_header;
+        }
+
+        @Override
+        protected void onHeaderBindViewHolder(ViewHolder holder, int position) {
+            super.onHeaderBindViewHolder(holder, position);
+            // TODO:头部布局数据绑定
+            holder.addItemClick(R.id.btn_header);
+            holder.find(Button.class,R.id.btn_header).setText("Header - "+getItem(position));
+        }
+
+        @Override
+        public int getFooterLayoutResId() {
+            //TODO:脚部布局
+            return  R.layout.androidx_item_footer;
+        }
+
+        @Override
+        protected void onFooterBindViewHolder(ViewHolder holder, int position) {
+            super.onFooterBindViewHolder(holder, position);
+            //TODO:脚部布局数据绑定
+            holder.find(Button.class,R.id.btn_footer).setText("Footer - "+getItem(position));
+            holder.addItemClick(R.id.btn_footer);
+        }
+
+        @Override
+        protected int getItemSwipeMenuLayoutResId() {
+            //TODO:侧滑Item布局
             return R.layout.android_menu;
         }
 
         @Override
+        protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
+            super.onSwipeBindViewHolder(holder, position);
+            //TODO:侧滑Ite布局数据绑定
+            holder.addItemClick(R.id.btn_item_name);
+            holder.addItemClick(R.id.tv_delete);
+            holder.addItemClick(R.id.tv_edit);
+            holder.find(TextView.class, R.id.btn_item_name).setText(getItem(position));
+        }
+
+        @Override
         protected int getItemLayoutResId(int viewType) {
-            //item布局文件
+            //TODO:普通item布局
             return R.layout.androidx_items;
         }
 
         @Override
-        protected void onItemBindViewHolder(ViewHolder holder, int position) {  
-            //itemView点击事件
-            holder.addItemClick(holder.itemView);
-            //找到控件,然后设置参数
-            holder.find(TextView.class, R.id.btn_item).setText(getItem(position));
-            //添加View点击事件
-            holder.addItemClick(R.id.tv_delete);
-            holder.addItemClick(R.id.tv_edit);
+        protected void onItemBindViewHolder(ViewHolder holder, int position) {
+            //TODO:普通item布局数据绑定
         }
+
     }
 
 ```
