@@ -347,7 +347,6 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder vh, int position) {
         viewHolder = (ViewHolder) vh;
-        viewHolder.setItemPosition(position);
         viewHolder.setOnItemClickLister(this);
         viewHolder.setOnItemFocusChangeListener(this);
         int viewType = getItemViewType(position);
@@ -513,7 +512,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public void addItem(int position, T t) {
         if (t != null) {
             getItems().add(position, t);
-            notifyItemRangeInserted(position, 1);
+            notifyItemInserted(position);
         }
     }
 

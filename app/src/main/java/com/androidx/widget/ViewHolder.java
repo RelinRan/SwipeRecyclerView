@@ -24,7 +24,7 @@ public class ViewHolder extends RecyclerView.ViewHolder {
     /**
      * 位置
      */
-    public int itemPosition;
+    public int itemPosition = -1;
 
     public ViewHolder(View itemView) {
         super(itemView);
@@ -87,7 +87,7 @@ public class ViewHolder extends RecyclerView.ViewHolder {
      * @return
      */
     public int getItemPosition() {
-        return itemPosition;
+        return itemPosition==-1?getAdapterPosition():itemPosition;
     }
 
     /**
