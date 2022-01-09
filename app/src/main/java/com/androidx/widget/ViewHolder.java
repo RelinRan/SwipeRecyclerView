@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView;
 /**
  * Author: Relin
  * Describe:Adapter控件容器
- * Date:2021/12/25 19:17
+ * Date:2020/12/26 18:18
  */
 public class ViewHolder extends RecyclerView.ViewHolder {
 
@@ -24,7 +24,7 @@ public class ViewHolder extends RecyclerView.ViewHolder {
     /**
      * 位置
      */
-    public int itemPosition;
+    public int itemPosition = -1;
 
     public ViewHolder(View itemView) {
         super(itemView);
@@ -73,7 +73,9 @@ public class ViewHolder extends RecyclerView.ViewHolder {
     }
 
     /**
-     * 设置Item位置
+     * 设置Item位置，
+     * RecyclerView的Adapter不用设置,
+     * ListView、GridView的Adapter必须设置
      *
      * @param position
      */
@@ -87,7 +89,7 @@ public class ViewHolder extends RecyclerView.ViewHolder {
      * @return
      */
     public int getItemPosition() {
-        return itemPosition;
+        return itemPosition == -1 ? getAdapterPosition() : itemPosition;
     }
 
     /**
@@ -130,7 +132,9 @@ public class ViewHolder extends RecyclerView.ViewHolder {
      * @return
      */
     public ViewHolder addItemClick(View v) {
-        v.setOnClickListener(new ItemClick(onItemClickLister));
+        if (v != null) {
+            v.setOnClickListener(new ItemClick(onItemClickLister));
+        }
         return this;
     }
 
@@ -196,7 +200,9 @@ public class ViewHolder extends RecyclerView.ViewHolder {
      * @return
      */
     public ViewHolder addItemFocus(View v) {
-        v.setOnFocusChangeListener(new ItemViewFocus(onItemFocusChangeListener));
+        if (v != null) {
+            v.setOnFocusChangeListener(new ItemViewFocus(onItemFocusChangeListener));
+        }
         return this;
     }
 

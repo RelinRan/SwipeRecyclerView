@@ -1,13 +1,16 @@
 package com.androidx.widget;
 
 import android.content.Context;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -19,15 +22,39 @@ import java.util.List;
  * Describe:Recycler使用的基础Adapter
  * Date:2020/12/26 19:17
  */
-public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements ViewHolder.OnItemClickLister, ViewHolder.OnItemFocusChangeListener {
+public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements RecyclerScrollHelper.OnScrollListener,
+        ViewHolder.OnItemClickLister, ViewHolder.OnItemFocusChangeListener {
 
-    public static final int ITEM_HEADER = -1;
-    public static final int ITEM_FOOTER = -2;
-    public static final int ITEM_SWIPE = -3;
-    private final int ID_SWIPE_ITEM_LAYOUT = 0x100;
-    private final int ID_SWIPE_ITEM_VIEW = 0x101;
-    private final int ID_SWIPE_MENU_LAYOUT = 0x200;
-    private final int ID_SWIPE_MENU_VIEW = 0x201;
+    private final String TAG = "RecyclerAdapter";
+    private final int MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT;
+    private final int WRAP_CONTENT = ViewGroup.LayoutParams.WRAP_CONTENT;
+
+    /**
+     * Item视图 - 头部
+     */
+    public static final int EXTRA_HEADER = -1;
+    /**
+     * Item视图 - 脚部
+     */
+    public static final int EXTRA_FOOTER = -2;
+    /**
+     * Item视图 - 加载更多
+     */
+    public static final int EXTRA_LOADING = -3;
+
+    /**
+     * 侧滑item - ViewGroup
+     */
+    private final int ID_SWIPE_ITEM_GROUP = 1;
+    /**
+     * 侧滑菜单 - ViewGroup
+     */
+    private final int ID_SWIPE_MENU_GROUP = 2;
+    /**
+     * 侧滑菜单
+     */
+    private final int ID_SWIPE_MENU = 3;
+
     /**
      * 上下文对象
      */
@@ -35,29 +62,220 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 数据对象
      */
-    private List<T> data;
+    private List<Complex<T>> complexSources;
+    private List<Extra> extraSources;
+    private List<T> dataSources;
     /**
      * 空视图
      */
-    private View emptyView;
+    private View placeholder;
     /**
-     * View容器
+     * 头部View
      */
-    private ViewHolder viewHolder;
-    /**
-     * 初始页面
-     */
-    private int initPage = 1;
-
     private View headerView;
+    /**
+     * 脚部View
+     */
     private View footerView;
-    private boolean showHeader = true;
-    private boolean showFooter = true;
-    private boolean showSwipeMenu = true;
+    /**
+     * 更多View
+     */
+    private View loadingView;
 
+    /**
+     * 头部ViewHolder
+     */
+    private ViewHolder headerViewHolder;
+    /**
+     * 脚部ViewHolder
+     */
+    private ViewHolder footerViewHolder;
+    /**
+     * 加载更多ViewHolder
+     */
+    private ViewHolder loadingViewHolder;
+
+    /**
+     * 是否显示头部
+     */
+    private boolean showHeader = true;
+    /**
+     * 是否显示脚部
+     */
+    private boolean showFooter = true;
+    /**
+     * 是否显示侧滑菜单
+     */
+    private boolean showSwipe = true;
+    /**
+     * 是否显示加载更多
+     */
+    private boolean showLoading = false;
+
+    /**
+     * 头部参数
+     */
+    private Bundle headerArgs;
+    /**
+     * 脚部参数
+     */
+    private Bundle footerArgs;
+    /**
+     * 加载更多参数
+     */
+    private Bundle loadingArgs;
+
+    /**
+     * 列表View
+     */
+    private RecyclerView recyclerView;
+    /**
+     * 滑动容器
+     */
+    private NestedScrollView nestedScrollView;
+    /**
+     * 滑动助手
+     */
+    private RecyclerScrollHelper scrollHelper;
 
     public RecyclerAdapter(Context context) {
         this.context = context;
+    }
+
+    /**
+     * 获取适配器对象
+     *
+     * @return
+     */
+    public RecyclerAdapter getRecyclerAdapter() {
+        return this;
+    }
+
+    /**
+     * 连接RecyclerView (加载更多必须调用此方法)
+     *
+     * @param view
+     */
+    public void attachRecyclerView(RecyclerView view) {
+        if (scrollHelper == null) {
+            scrollHelper = new RecyclerScrollHelper();
+            scrollHelper.setOnScrollListener(this);
+        }
+        view.addOnScrollListener(scrollHelper);
+        recyclerView = view;
+    }
+
+    /**
+     * 获取列表控件
+     *
+     * @return
+     */
+    public RecyclerView getRecyclerView() {
+        return recyclerView;
+    }
+
+
+    /**
+     * 连接NestedScrollView (父容器有NestedScrollView，加载更多必须调用此方法)
+     *
+     * @param view
+     */
+    public void attachNestedScrollView(NestedScrollView view) {
+        if (scrollHelper == null) {
+            scrollHelper = new RecyclerScrollHelper();
+            scrollHelper.setOnScrollListener(this);
+        }
+        view.setOnScrollChangeListener(scrollHelper);
+        nestedScrollView = view;
+    }
+
+    /**
+     * 获取NestedScrollView
+     *
+     * @return
+     */
+    public NestedScrollView getNestedScrollView() {
+        return nestedScrollView;
+    }
+
+    /**
+     * 获取滑动助手
+     *
+     * @return
+     */
+    public RecyclerScrollHelper getScrollHelper() {
+        return scrollHelper;
+    }
+
+    /**
+     * 获取加载更多Layout
+     *
+     * @return
+     */
+    public SwipeLoadingLayout findSwipeLoadingLayout() {
+        if (getLoadingViewHolder() != null) {
+            return getLoadingViewHolder().find(R.id.item_loading_more);
+        }
+        return null;
+    }
+
+    @Override
+    public void onScrolled(RecyclerView v, int dx, int dy) {
+        onScrolledMore(v);
+    }
+
+    @Override
+    public void onScrollChange(NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        onScrolledMore(v);
+    }
+
+    /**
+     * 处理滑动加载更多
+     *
+     * @param v
+     */
+    protected void onScrolledMore(View v) {
+        if (isHasLoading() && isShowLoading()) {
+            boolean isScrolledTop = v.canScrollVertically(1);
+            boolean isScrolledBottom = v.canScrollVertically(-1);
+            boolean isNotMore = !isScrolledTop && !isScrolledBottom;
+            SwipeLoadingLayout layout = findSwipeLoadingLayout();
+            if (layout != null) {
+                //数据未填满情况
+                if (isNotMore) {
+                    layout.setLoading(false);
+                }
+                //列表中间位置
+                if (isScrolledTop && isScrolledBottom) {
+                    layout.setLoading(true);
+                }
+            }
+            //滑动到底部情况
+            if (isScrolledBottom && !isScrolledTop) {
+                if (layout != null) {
+                    layout.setLoading(true);
+                }
+                if (onLoadingListener != null) {
+                    onLoadingListener.onLoading();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+
+    }
+
+    //============================Header=========================
+
+    /**
+     * 获取头部LayoutResId
+     *
+     * @return
+     */
+    public int getHeaderLayoutResId() {
+        return 0;
     }
 
     /**
@@ -71,156 +289,31 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 设置脚部View
-     *
-     * @param footerView
-     */
-    public void setFooterView(View footerView) {
-        this.footerView = footerView;
-        notifyDataSetChanged();
-    }
-
-    @Override
-    public int getItemViewType(int position) {
-        if (isHasHeader() && position == 0) {
-            return ITEM_HEADER;
-        }
-        if (isHasFooter() && position == getItemCount() - 1) {
-            return ITEM_FOOTER;
-        }
-        if (isHasSwipeMenu() && isShowSwipeMenu()) {
-            return ITEM_SWIPE;
-        }
-        return super.getItemViewType(position);
-    }
-
-    /**
-     * 获取Item布局资源
+     * 获取头部View
      *
      * @return
      */
-    protected abstract int getItemLayoutResId(int viewType);
-
-    /**
-     * 获取View容器
-     *
-     * @return
-     */
-    public ViewHolder getViewHolder() {
-        return viewHolder;
+    public View getHeaderView() {
+        return headerView;
     }
 
     /**
-     * 是否有菜单
+     * 设置头部参数
      *
-     * @return
+     * @param args
      */
-    public boolean isHasSwipeMenu() {
-        return getItemSwipeMenuLayoutResId() != 0;
-    }
-
-    /**
-     * 是否显示侧滑菜单，默认显示
-     *
-     * @return
-     */
-    public boolean isShowSwipeMenu() {
-        return showSwipeMenu;
-    }
-
-    /**
-     * 设置是否显示侧滑菜单
-     *
-     * @param showSwipeMenu
-     */
-    public void setShowSwipeMenu(boolean showSwipeMenu) {
-        this.showSwipeMenu = showSwipeMenu;
+    public void setHeaderArgs(Bundle args) {
+        this.headerArgs = args;
         notifyDataSetChanged();
     }
 
     /**
-     * 滑动菜单LayoutResId
+     * 获取脚部参数
      *
      * @return
      */
-    protected int getItemSwipeMenuLayoutResId() {
-        return 0;
-    }
-
-    /**
-     * 找到侧滑ItemLayout
-     *
-     * @param childView
-     * @return
-     */
-    public View findSwipeItemLayout(View childView) {
-        return childView.findViewById(ID_SWIPE_ITEM_LAYOUT);
-    }
-
-    /**
-     * 找到侧滑ItemView
-     *
-     * @param childView
-     * @return
-     */
-    public View findSwipeItemView(View childView) {
-        return childView.findViewById(ID_SWIPE_ITEM_VIEW);
-    }
-
-    /**
-     * 找到侧滑MenuLayout
-     *
-     * @param childView
-     * @return
-     */
-    public View findSwipeMenuLayout(View childView) {
-        return childView.findViewById(ID_SWIPE_MENU_LAYOUT);
-    }
-
-    /**
-     * 找到MenuView
-     *
-     * @param childView
-     * @return
-     */
-    public View findSwipeMenuView(View childView) {
-        return childView.findViewById(ID_SWIPE_MENU_VIEW);
-    }
-
-    /**
-     * 获取item菜单View
-     *
-     * @param parent
-     * @param viewType
-     * @return
-     */
-    protected View getItemSwipeMenuView(ViewGroup parent, int viewType) {
-        int MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT;
-        int WRAP_CONTENT = ViewGroup.LayoutParams.WRAP_CONTENT;
-        FrameLayout swipeLayout = new FrameLayout(getContext());
-        swipeLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
-        //Menu
-        FrameLayout menuLayout = new FrameLayout(getContext());
-        menuLayout.setId(ID_SWIPE_MENU_LAYOUT);
-        menuLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
-        View menuView = LayoutInflater.from(getContext()).inflate(getItemSwipeMenuLayoutResId(), null);
-        menuView.setId(ID_SWIPE_MENU_VIEW);
-        FrameLayout.LayoutParams menuParams = new FrameLayout.LayoutParams(WRAP_CONTENT, MATCH_PARENT);
-        menuParams.gravity = Gravity.RIGHT;
-        menuLayout.addView(menuView, menuParams);
-        int measureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
-        menuView.measure(measureSpec, measureSpec);
-        menuLayout.setTranslationX(menuView.getMeasuredWidth());
-        swipeLayout.addView(menuLayout);
-        //RecyclerView itemView
-        FrameLayout leftLayout = new FrameLayout(getContext());
-        leftLayout.setId(ID_SWIPE_ITEM_LAYOUT);
-        leftLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
-        View itemView = LayoutInflater.from(getContext()).inflate(getItemLayoutResId(viewType), leftLayout, false);
-        itemView.setId(ID_SWIPE_ITEM_VIEW);
-        leftLayout.addView(itemView);
-        swipeLayout.addView(leftLayout);
-        return swipeLayout;
+    public Bundle getHeaderArgs() {
+        return headerArgs;
     }
 
     /**
@@ -230,6 +323,15 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public boolean isHasHeader() {
         return getHeaderLayoutResId() != 0 || getHeaderView() != null;
+    }
+
+    /**
+     * 获取头部ViewHolder
+     *
+     * @return
+     */
+    public ViewHolder getHeaderViewHolder() {
+        return headerViewHolder;
     }
 
     /**
@@ -248,7 +350,66 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setShowHeader(boolean showHeader) {
         this.showHeader = showHeader;
+        setDataSource(dataSources);
+    }
+
+
+    //============================Footer=========================
+
+    /**
+     * 获取脚部LayoutResId
+     *
+     * @return
+     */
+    public int getFooterLayoutResId() {
+        return 0;
+    }
+
+    /**
+     * 设置脚部View
+     *
+     * @param footerView
+     */
+    public void setFooterView(View footerView) {
+        this.footerView = footerView;
         notifyDataSetChanged();
+    }
+
+    /**
+     * 获取脚部View
+     *
+     * @return
+     */
+    public View getFooterView() {
+        return footerView;
+    }
+
+    /**
+     * 设置脚部参数
+     *
+     * @param args
+     */
+    public void setFooterArgs(Bundle args) {
+        this.footerArgs = args;
+        notifyDataSetChanged();
+    }
+
+    /**
+     * 获取脚部参数
+     *
+     * @return
+     */
+    public Bundle getFooterArgs() {
+        return footerArgs;
+    }
+
+    /**
+     * 获取脚部ViewHolder
+     *
+     * @return
+     */
+    public ViewHolder getFooterViewHolder() {
+        return footerViewHolder;
     }
 
     /**
@@ -276,44 +437,225 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setShowFooter(boolean showFooter) {
         this.showFooter = showFooter;
+        setDataSource(dataSources);
+    }
+
+    //============================More=========================
+
+    /**
+     * 加载更多布局
+     *
+     * @return
+     */
+    public int getLoadingLayoutResId() {
+        return R.layout.androidx_load_more;
+    }
+
+    /**
+     * 是否有更多View
+     *
+     * @return
+     */
+    public boolean isHasLoading() {
+        return getLoadingLayoutResId() != 0 || getLoadingView() != null;
+    }
+
+    /**
+     * 设置加载更多View
+     *
+     * @param loadingView
+     */
+    public void setLoadingView(View loadingView) {
+        this.loadingView = loadingView;
         notifyDataSetChanged();
     }
 
     /**
-     * 获取头部LayoutResId
+     * 获取加载更多View
      *
      * @return
      */
-    public int getHeaderLayoutResId() {
+    public View getLoadingView() {
+        return loadingView;
+    }
+
+    /**
+     * 设置加载更多参数
+     *
+     * @param args
+     */
+    public void setLoadingArgs(Bundle args) {
+        this.loadingArgs = args;
+        notifyDataSetChanged();
+    }
+
+    /**
+     * 获取加载更多参数
+     *
+     * @return
+     */
+    public Bundle getLoadingArgs() {
+        return loadingArgs;
+    }
+
+    /**
+     * 获取加载更多ViewHolder
+     *
+     * @return
+     */
+    public ViewHolder getLoadingViewHolder() {
+        return loadingViewHolder;
+    }
+
+    /**
+     * 是否显示加载更多布局
+     *
+     * @return
+     */
+    public boolean isShowLoading() {
+        return showLoading;
+    }
+
+    /**
+     * 设置是否显示加载更多布局
+     *
+     * @param showLoading
+     */
+    public void setShowLoading(boolean showLoading) {
+        this.showLoading = showLoading;
+        setDataSource(dataSources);
+    }
+
+    /**
+     * 设置是否有更多数据
+     *
+     * @param loading
+     */
+    public void setLoading(boolean loading) {
+        SwipeLoadingLayout loadingLayout = findSwipeLoadingLayout();
+        if (loadingLayout != null) {
+            loadingLayout.setLoading(loading);
+        }
+    }
+
+    //============================SwipeMenu=========================
+
+    /**
+     * 滑动菜单LayoutResId
+     *
+     * @return
+     */
+    protected int getItemSwipeMenuLayoutResId() {
         return 0;
     }
 
     /**
-     * 获取脚部LayoutResId
+     * 是否有菜单
      *
      * @return
      */
-    public int getFooterLayoutResId() {
-        return 0;
+    public boolean isHasSwipe() {
+        return getItemSwipeMenuLayoutResId() != 0;
+    }
+
+
+    /**
+     * 是否显示侧滑菜单，默认显示
+     *
+     * @return
+     */
+    public boolean isShowSwipe() {
+        return showSwipe;
     }
 
     /**
-     * 获取头部View
+     * 设置是否显示侧滑菜单
      *
-     * @return
+     * @param showSwipe
      */
-    public View getHeaderView() {
-        return headerView;
+    public void setShowSwipe(boolean showSwipe) {
+        this.showSwipe = showSwipe;
+        notifyDataSetChanged();
     }
 
     /**
-     * 获取脚部View
+     * 找到侧滑ItemLayout
+     *
+     * @param child
+     * @return
+     */
+    public View findSwipeItemLayout(View child) {
+        return child.findViewById(ID_SWIPE_ITEM_GROUP);
+    }
+
+    /**
+     * 找到侧滑MenuLayout
+     *
+     * @param child
+     * @return
+     */
+    public View findSwipeMenuLayout(View child) {
+        return child.findViewById(ID_SWIPE_MENU_GROUP);
+    }
+
+    /**
+     * 找到MenuView
+     *
+     * @param child
+     * @return
+     */
+    public View findSwipeMenuView(View child) {
+        return child.findViewById(ID_SWIPE_MENU);
+    }
+
+    /**
+     * 获取item菜单View
+     *
+     * @param parent
+     * @param viewType
+     * @return
+     */
+    protected View getItemSwipeMenuView(ViewGroup parent, int viewType) {
+        FrameLayout swipeLayout = new FrameLayout(getContext());
+        swipeLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
+        //Menu
+        FrameLayout menuLayout = new FrameLayout(getContext());
+        menuLayout.setId(ID_SWIPE_MENU_GROUP);
+        menuLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        View menuView = LayoutInflater.from(getContext()).inflate(getItemSwipeMenuLayoutResId(), null);
+        menuView.setId(ID_SWIPE_MENU);
+        FrameLayout.LayoutParams menuParams = new FrameLayout.LayoutParams(WRAP_CONTENT, MATCH_PARENT);
+        menuParams.gravity = Gravity.RIGHT;
+        menuLayout.addView(menuView, menuParams);
+        int measureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        menuView.measure(measureSpec, measureSpec);
+        menuLayout.setTranslationX(menuView.getMeasuredWidth());
+        swipeLayout.addView(menuLayout);
+        //RecyclerView itemView
+        FrameLayout leftLayout = new FrameLayout(getContext());
+        leftLayout.setId(ID_SWIPE_ITEM_GROUP);
+        leftLayout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+        View itemView = LayoutInflater.from(getContext()).inflate(getItemLayoutResId(viewType), leftLayout, false);
+        leftLayout.addView(itemView);
+        swipeLayout.addView(leftLayout);
+        return swipeLayout;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (isExtra(position)) {
+            Extra item = getExtra(position);
+            return item.getViewType();
+        }
+        return super.getItemViewType(position);
+    }
+
+    /**
+     * 获取Item布局资源
      *
      * @return
      */
-    public View getFooterView() {
-        return footerView;
-    }
+    protected abstract int getItemLayoutResId(int viewType);
 
     /**
      * 获取Item布局视图
@@ -324,18 +666,46 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     protected View getItemView(ViewGroup parent, int viewType) {
         //头部
-        if (isHasHeader() && isShowHeader() && viewType == ITEM_HEADER) {
-            return headerView == null ? LayoutInflater.from(getContext()).inflate(getHeaderLayoutResId(), parent, false) : headerView;
-        }
-        //侧滑
-        if (isHasSwipeMenu() && isShowSwipeMenu() && viewType == ITEM_SWIPE) {
-            return getItemSwipeMenuView(parent, viewType);
+        if (isHasHeader() && isShowHeader() && viewType == EXTRA_HEADER) {
+            return headerView == null ? inflate(parent, getHeaderLayoutResId()) : attachToFrameLayout(headerView);
         }
         //脚部
-        if (isHasFooter() && isShowFooter() && viewType == ITEM_FOOTER) {
-            return footerView == null ? LayoutInflater.from(getContext()).inflate(getFooterLayoutResId(), parent, false) : footerView;
+        if (isHasFooter() && isShowFooter() && viewType == EXTRA_FOOTER) {
+            return footerView == null ? inflate(parent, getFooterLayoutResId()) : attachToFrameLayout(footerView);
         }
-        return LayoutInflater.from(getContext()).inflate(getItemLayoutResId(viewType), parent, false);
+        //加载更多
+        if (isHasLoading() && isShowLoading() && viewType == EXTRA_LOADING) {
+            return loadingView == null ? inflate(parent, getLoadingLayoutResId()) : attachToFrameLayout(loadingView);
+        }
+        //侧滑
+        if (isSwipeEnable()) {
+            return getItemSwipeMenuView(parent, viewType);
+        }
+        return inflate(parent, getItemLayoutResId(viewType));
+    }
+
+    /**
+     * 根据LayoutResourceId获取View
+     *
+     * @param parent   父级
+     * @param resource 资源ID
+     * @return
+     */
+    protected View inflate(ViewGroup parent, @LayoutRes int resource) {
+        return LayoutInflater.from(getContext()).inflate(resource, parent, false);
+    }
+
+    /**
+     * 附加到FrameLayout
+     *
+     * @param v
+     * @return
+     */
+    protected View attachToFrameLayout(View v) {
+        FrameLayout layout = new FrameLayout(getContext());
+        layout.setLayoutParams(new FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT));
+        layout.addView(v);
+        return layout;
     }
 
     @NonNull
@@ -346,40 +716,87 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder vh, int position) {
-        viewHolder = (ViewHolder) vh;
-        viewHolder.setItemPosition(position);
-        viewHolder.setOnItemClickLister(this);
-        viewHolder.setOnItemFocusChangeListener(this);
+        ViewHolder holder = (ViewHolder) vh;
+        addItemClick(holder, position);
         int viewType = getItemViewType(position);
-        if (viewType == ITEM_HEADER) {
-            onHeaderBindViewHolder(viewHolder, position);
-        } else if (viewType == ITEM_FOOTER) {
-            onFooterBindViewHolder(viewHolder, position);
-        } else if (viewType == ITEM_SWIPE) {
-            onSwipeBindViewHolder(viewHolder, position);
+        if (viewType == EXTRA_HEADER) {
+            onHeaderBindViewHolder(holder, headerArgs);
+        } else if (viewType == EXTRA_FOOTER) {
+            onFooterBindViewHolder(holder, footerArgs);
+        } else if (viewType == EXTRA_LOADING) {
+            onLoadingBindViewHolder(holder, loadingArgs);
         } else {
-            onItemBindViewHolder(viewHolder, position);
+            if (isSwipeEnable()) {
+                onSwipeBindViewHolder(holder, position);
+            } else {
+                onItemBindViewHolder(holder, position);
+            }
         }
     }
 
     /**
-     * 头部绑定数据
+     * 添加item点击事件
+     *
+     * @param holder
+     * @param position
+     */
+    private void addItemClick(ViewHolder holder, int position) {
+        holder.setOnItemClickLister(this);
+        holder.setOnItemFocusChangeListener(this);
+    }
+
+    @Override
+    public void onItemClick(View v, int position) {
+        if (isExtra(position)) {
+            if (onExtraItemClickListener != null) {
+                onExtraItemClickListener.onExtraItemClick(this, v, position);
+            }
+        } else {
+            if (onItemClickListener != null) {
+                onItemClickListener.onItemClick(this, v, position);
+            }
+        }
+    }
+
+    @Override
+    public void onItemFocusChange(View v, int position, boolean hasFocus) {
+        if (isExtra(position)) {
+            if (onExtraItemClickListener != null) {
+                onExtraItemClickListener.onExtraItemClick(this, v, position);
+            }
+        } else {
+            if (onItemFocusChangeListener != null) {
+                onItemFocusChangeListener.onItemFocusChange(this, v, position, hasFocus);
+            }
+        }
+    }
+
+    /**
+     * 绑定数据
      *
      * @param holder   控件容器
      * @param position 位置
      */
-    protected void onHeaderBindViewHolder(ViewHolder holder, int position) {
+    protected abstract void onItemBindViewHolder(ViewHolder holder, int position);
 
+    /**
+     * 头部绑定数据
+     *
+     * @param holder 控件容器
+     * @param args   参数
+     */
+    protected void onHeaderBindViewHolder(ViewHolder holder, Bundle args) {
+        headerViewHolder = holder;
     }
 
     /**
      * 脚部数据绑定
      *
-     * @param holder   控件容器
-     * @param position 位置
+     * @param holder 控件容器
+     * @param args   参数
      */
-    protected void onFooterBindViewHolder(ViewHolder holder, int position) {
-
+    protected void onFooterBindViewHolder(ViewHolder holder, Bundle args) {
+        footerViewHolder = holder;
     }
 
     /**
@@ -393,12 +810,14 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 绑定数据
+     * 加载更多数据绑定
      *
-     * @param holder   控件容器
-     * @param position 位置
+     * @param holder 控件容器
+     * @param args   参数
      */
-    protected abstract void onItemBindViewHolder(ViewHolder holder, int position);
+    protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
+        loadingViewHolder = holder;
+    }
 
     @Override
     public long getItemId(int position) {
@@ -407,9 +826,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public int getItemCount() {
-        int itemCount = data == null ? 0 : data.size();
-        if (emptyView != null) {
-            emptyView.setVisibility(itemCount == 0 ? View.VISIBLE : View.GONE);
+        int itemCount = complexSources == null ? 0 : complexSources.size();
+        if (placeholder != null) {
+            placeholder.setVisibility(itemCount == 0 ? View.VISIBLE : View.GONE);
         }
         return itemCount;
     }
@@ -424,30 +843,51 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 设置数据源
+     * 是否支持侧滑
      *
-     * @param data
+     * @return
      */
-    public void setItems(List<T> data) {
-        setItems(data, true);
+    public boolean isSwipeEnable() {
+        return isHasSwipe() && isShowSwipe();
     }
 
     /**
-     * 设置数据
+     * 设置数据源
      *
-     * @param data
+     * @param sources
      */
-    public void setItems(List<T> data, boolean notify) {
-        int size = data == null ? 0 : data.size();
+    public void setDataSource(List<T> sources) {
+        setDataSource(sources, true);
+    }
+
+    /**
+     * 设置数据源
+     *
+     * @param sources
+     */
+    public void setDataSource(List<T> sources, boolean notify) {
+        complexSources = new ArrayList<>();
+        dataSources = new ArrayList<>();
+        extraSources = new ArrayList<>();
         if (isHasHeader() && isShowHeader()) {
-            data.add(0, size == 0 ? (T) new Object() : data.get(0));
+            Extra extra = new Extra(EXTRA_HEADER);
+            extraSources.add(extra);
+            complexSources.add(new Complex(extra));
         }
+        int size = sources == null ? 0 : sources.size();
+        for (int i = 0; i < size; i++) {
+            complexSources.add(new Complex(sources.get(i), isSwipeEnable()));
+        }
+        dataSources = sources;
         if (isHasFooter() && isShowFooter()) {
-            data.add(size == 0 ? 0 : size - 1, size == 0 ? (T) new Object() : data.get(size - 1));
+            Extra extra = new Extra(EXTRA_FOOTER);
+            extraSources.add(extra);
+            complexSources.add(new Complex(extra));
         }
-        this.data = data;
-        if (emptyView != null) {
-            emptyView.setVisibility(getItemCount() == 0 ? View.VISIBLE : View.GONE);
+        if (isHasLoading() && isShowLoading()) {
+            Extra extra = new Extra(EXTRA_LOADING);
+            extraSources.add(extra);
+            complexSources.add(new Complex(extra));
         }
         if (notify) {
             notifyDataSetChanged();
@@ -455,111 +895,199 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 设置初始页面
+     * 获取组合的复杂数据源（普通+[Header/Footer/Loading]）
      *
-     * @param initPage
+     * @return
      */
-    public void setInitPage(int initPage) {
-        this.initPage = initPage;
+    public List<Complex<T>> getComplexSources() {
+        return complexSources;
     }
 
     /**
-     * 设置分页数据
+     * 获取额外数据源
      *
-     * @param page 页面
-     * @param data 数据
+     * @return
      */
-    public void setPageItems(int page, List<T> data) {
-        if (page == initPage) {
-            setItems(data);
-        } else {
-            addItems(data);
-        }
+    public List<Extra> getExtraSources() {
+        return extraSources;
     }
 
     /**
-     * 添加Items
+     * 获取普通源数据
      *
-     * @param data
+     * @return
      */
-    public void addItems(List<T> data) {
-        int size = data == null ? 0 : data.size();
-        int positionStart = getItemCount() - 1;
-        if (size > 0) {
-            positionStart = getItemCount() - 1;
+    public List<T> getDataSources() {
+        return dataSources;
+    }
+
+    /**
+     * 在复杂数据源中查找数据源
+     *
+     * @return
+     */
+    public List<T> findDataSources() {
+        List<T> dataSources = new ArrayList<>();
+        for (int i = 0; i < complexSources.size(); i++) {
+            T item = complexSources.get(i).getItem();
+            if (item != null) {
+                dataSources.add(item);
+            }
         }
-        getItems().addAll(data);
-        notifyItemRangeInserted(positionStart + 1, size);
+        return dataSources;
+    }
+
+    /**
+     * 是否是普通Item
+     *
+     * @param position
+     * @return
+     */
+    public boolean isItem(int position) {
+        return complexSources.get(position).getItem() != null;
+    }
+
+    /**
+     * 获取Item数据
+     *
+     * @param position
+     * @return
+     */
+    public T getItem(int position) {
+        return complexSources.get(position).getItem();
+    }
+
+    /**
+     * 是否是额外Item(Header/Footer/More)
+     *
+     * @param position
+     * @return
+     */
+    public boolean isExtra(int position) {
+        return complexSources.get(position).getExtra() != null;
+    }
+
+    /**
+     * 获取额外Item
+     *
+     * @param position
+     * @return
+     */
+    public Extra getExtra(int position) {
+        return complexSources.get(position).getExtra();
     }
 
     /**
      * 添加Item
      *
-     * @param t
+     * @param item
      */
-    public void addItem(T t) {
-        if (t != null) {
-            getItems().add(t);
-            notifyItemInserted(getItemCount() - 1);
+    public void addItem(T item) {
+        dataSources.add(item);
+        setDataSource(dataSources, false);
+        int position = dataSources.size();
+        if (isHasHeader() && isShowHeader()) {
+            position = dataSources.size() + 1;
         }
+        notifyItemInserted(position);
     }
 
     /**
-     * 添加item
+     * 添加Item
      *
-     * @param position
-     * @param t
+     * @param position 位置
+     * @param item     数据item
      */
-    public void addItem(int position, T t) {
-        if (t != null) {
-            getItems().add(position, t);
-            notifyItemRangeInserted(position, 1);
+    public void addItem(int position, T item) {
+        complexSources.add(position, new Complex(item, isSwipeEnable()));
+        setDataSource(findDataSources(), false);
+        int insertPosition = dataSources.size();
+        if (isHasHeader() && isShowHeader()) {
+            insertPosition = dataSources.size() + 1;
         }
+        notifyItemInserted(insertPosition);
     }
 
     /**
-     * 首位添加
+     * 添加第一个Item
      *
-     * @param t
+     * @param item
      */
-    public void addFirst(T t) {
-        if (getItemCount() == 0) {
-            addItem(t);
+    public void addFirst(T item) {
+        dataSources.add(0, item);
+        setDataSource(dataSources, false);
+        int position = 0;
+        if (isHasHeader() && isShowHeader()) {
+            position = 1;
+        }
+        notifyItemInserted(position);
+    }
+
+    /**
+     * 设置分页数据
+     *
+     * @param page    页面
+     * @param sources 来源
+     */
+    public void setPageDataSource(int page, List<T> sources) {
+        setPageDataSource(1, page, sources);
+    }
+
+    /**
+     * 设置分页数据
+     *
+     * @param init    初始
+     * @param page    页面
+     * @param sources 来源
+     */
+    public void setPageDataSource(int init, int page, List<T> sources) {
+        if (page == init) {
+            setDataSource(sources);
         } else {
-            if (isHasHeader() && isShowHeader()) {
-                addItem(1, t);
-            } else {
-                addItem(0, t);
-            }
+            addItems(sources);
         }
     }
 
     /**
-     * 删除Item
+     * 添加多个Item
      *
-     * @param position
+     * @param sources 来源
+     */
+    public void addItems(List<T> sources) {
+        int count = sources == null ? 0 : sources.size();
+        for (int i = 0; i < count; i++) {
+            dataSources.add((T) new Complex(sources.get(i), isSwipeEnable()));
+        }
+        setDataSource(dataSources, false);
+        int positionStart = getItemCount() - 1;
+        if (count > 0) {
+            positionStart = getItemCount() - 1;
+        }
+        notifyItemRangeInserted(positionStart + 1, count);
+    }
+
+    /**
+     * 删除item
+     *
+     * @param position 位置
      */
     public void removeItem(int position) {
-        if (getItemCount() > 0) {
-            getItems().remove(position);
-            notifyItemRemoved(position);
-            notifyItemRangeChanged(position, getItemCount() - position);
-        }
+        complexSources.remove(position);
+        setDataSource(findDataSources(), false);
+        notifyItemRemoved(position);
     }
 
     /**
-     * 删除Item
+     * 删除多个Item
      *
-     * @param positionStart
+     * @param positionStart 开始位置
+     * @param itemCount     个数
      */
     public void removeItems(int positionStart, int itemCount) {
-        if (getItemCount() > 0) {
-            for (int i = 0; i < getItemCount() && itemCount <= getItemCount(); i++) {
-                if (i >= positionStart && i < itemCount) {
-                    getItems().remove(i);
-                }
-            }
-            notifyItemRangeChanged(positionStart, itemCount);
+        if (positionStart < getItemCount() && (itemCount - 1 + positionStart) < getItemCount()) {
+            complexSources.removeAll(complexSources.subList(positionStart, positionStart + itemCount));
+            setDataSource(findDataSources(), false);
+            notifyItemRangeRemoved(positionStart, itemCount);
         }
     }
 
@@ -572,57 +1100,14 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public void swapItem(int fromPosition, int toPosition) {
         if (fromPosition < toPosition) {
             for (int i = fromPosition; i < toPosition; i++) {
-                Collections.swap(getItems(), i, i + 1);
+                Collections.swap(complexSources, i, i + 1);
             }
         } else {
             for (int i = fromPosition; i > toPosition; i--) {
-                Collections.swap(getItems(), i, i - 1);
+                Collections.swap(complexSources, i, i - 1);
             }
         }
         notifyItemMoved(fromPosition, toPosition);
-    }
-
-    /**
-     * 获取数据
-     *
-     * @return
-     */
-    public List<T> getItems() {
-        if (data == null) {
-            data = new ArrayList<>();
-        }
-        if ((isHasHeader() && isHasHeader()) && !(isHasFooter() && isShowFooter())) {
-            if (data.size() > 1) {
-                data.subList(1, getItemCount() - 1);
-            }
-        }
-        if (!(isHasHeader() && isHasHeader()) && (isHasFooter() && isShowFooter())) {
-            if (data.size() > 2) {
-                data.subList(0, getItemCount() - 2);
-            }
-        }
-        if ((isHasHeader() && isHasHeader()) && (isHasFooter() && isShowFooter())) {
-            if (data.size() > 2) {
-                data.subList(1, getItemCount() - 2);
-            }
-        }
-        return data;
-    }
-
-    /**
-     * 获取Item
-     *
-     * @param position 位置
-     * @return
-     */
-    public T getItem(int position) {
-        if (getItemCount() == 0) {
-            return null;
-        }
-        if (data == null) {
-            return null;
-        }
-        return data.get(position);
     }
 
     /**
@@ -630,62 +1115,46 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      *
      * @return
      */
-    public View getEmptyView() {
-        return emptyView;
+    public View getPlaceholder() {
+        return placeholder;
     }
 
     /**
      * 设置空视图
      *
-     * @param emptyView 视图
+     * @param placeholder 占位视图
      */
-    public void setEmptyView(View emptyView) {
-        this.emptyView = emptyView;
-    }
-
-    @Override
-    public void onItemClick(View v, int position) {
-        if (onItemClickListener != null) {
-            onItemClickListener.onItemClick(this, v, position);
-        }
-    }
-
-    @Override
-    public void onItemFocusChange(View v, int position, boolean hasFocus) {
-        if (onItemFocusChangeListener != null) {
-            onItemFocusChangeListener.onItemFocusChange(this, v, position, hasFocus);
-        }
+    public void setPlaceholder(View placeholder) {
+        this.placeholder = placeholder;
     }
 
     /**
      * Item点击事件
      */
-    private OnItemClickListener<T> onItemClickListener;
-
-    /**
-     * 设置Item点击事件
-     *
-     * @param onItemClickListener
-     */
-    public void setOnItemClickListener(OnItemClickListener<T> onItemClickListener) {
-        this.onItemClickListener = onItemClickListener;
-    }
+    private OnItemClickListener onItemClickListener;
 
     /**
      * 获取Item点击事件
      *
      * @return
      */
-    public OnItemClickListener<T> getOnItemClickListener() {
+    public OnItemClickListener getOnItemClickListener() {
         return onItemClickListener;
     }
 
     /**
-     * Item点击事件回调
+     * 设置Item点击事件
      *
-     * @param <T>
+     * @param onItemClickListener
      */
-    public interface OnItemClickListener<T> {
+    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
+    }
+
+    /**
+     * Item点击事件回调
+     */
+    public interface OnItemClickListener {
 
         /**
          * Item点击
@@ -694,21 +1163,21 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
          * @param v        数据
          * @param position 位置
          */
-        void onItemClick(RecyclerAdapter<T> adapter, View v, int position);
+        void onItemClick(RecyclerAdapter adapter, View v, int position);
 
     }
 
     /**
      * 设置焦点改变点击事件
      */
-    public OnItemFocusChangeListener<T> onItemFocusChangeListener;
+    public OnItemFocusChangeListener onItemFocusChangeListener;
 
     /**
      * 获取焦点改变事件
      *
      * @return
      */
-    public OnItemFocusChangeListener<T> getOnItemFocusChangeListener() {
+    public OnItemFocusChangeListener getOnItemFocusChangeListener() {
         return onItemFocusChangeListener;
     }
 
@@ -717,16 +1186,14 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      *
      * @param onItemFocusChangeListener
      */
-    public void setOnItemFocusChangeListener(OnItemFocusChangeListener<T> onItemFocusChangeListener) {
+    public void setOnItemFocusChangeListener(OnItemFocusChangeListener onItemFocusChangeListener) {
         this.onItemFocusChangeListener = onItemFocusChangeListener;
     }
 
     /**
      * 焦点改变事件
-     *
-     * @param <ITEM>
      */
-    public interface OnItemFocusChangeListener<ITEM> {
+    public interface OnItemFocusChangeListener {
 
         /**
          * 焦点修改
@@ -736,8 +1203,185 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
          * @param position 位置
          * @param hasFocus 是否获取焦点
          */
-        void onItemFocusChange(RecyclerAdapter<ITEM> adapter, View v, int position, boolean hasFocus);
+        void onItemFocusChange(RecyclerAdapter adapter, View v, int position, boolean hasFocus);
 
+    }
+
+    /**
+     * 附加Item点击
+     */
+    private OnExtraItemClickListener onExtraItemClickListener;
+
+    /**
+     * 获取附加Item点击
+     *
+     * @return
+     */
+    public OnExtraItemClickListener getOnExtraItemClickListener() {
+        return onExtraItemClickListener;
+    }
+
+    /**
+     * 设置附加Item点击<br/>
+     * Header、Footer、Loading<br/>
+     *
+     * @param onExtraItemClickListener
+     */
+    public void setOnExtraItemClickListener(OnExtraItemClickListener onExtraItemClickListener) {
+        this.onExtraItemClickListener = onExtraItemClickListener;
+    }
+
+    public interface OnExtraItemClickListener {
+
+        /**
+         * 附加Item点击
+         *
+         * @param adapter  适配器
+         * @param v        数据
+         * @param position 位置
+         */
+        void onExtraItemClick(RecyclerAdapter adapter, View v, int position);
+
+
+    }
+
+    /**
+     * 附加焦点改变事件
+     */
+    private OnExtraItemFocusChangeListener onExtraItemFocusChangeListener;
+
+    /**
+     * 获取附加焦点改变事件
+     *
+     * @return
+     */
+    public void setOnExtraItemFocusChangeListener(OnExtraItemFocusChangeListener onExtraItemFocusChangeListener) {
+        this.onExtraItemFocusChangeListener = onExtraItemFocusChangeListener;
+    }
+    /**
+     * 设置附加焦点改变事件
+     *
+     * @param onAttachFocusChangeListener
+     */
+
+    /**
+     * 附加焦点改变事件
+     */
+    public interface OnExtraItemFocusChangeListener {
+
+        /**
+         * 附加焦点改变
+         *
+         * @param adapter  适配器
+         * @param v        控件
+         * @param position 位置
+         * @param hasFocus 是否获取焦点
+         */
+        void onExtraItemFocusChange(RecyclerAdapter adapter, View v, int position, boolean hasFocus);
+
+    }
+
+    /**
+     * 加载更多监听
+     */
+    private OnLoadingListener onLoadingListener;
+
+    /**
+     * 获取加载更多监听
+     *
+     * @return
+     */
+    public OnLoadingListener getOnLoadingListener() {
+        return onLoadingListener;
+    }
+
+    /**
+     * 设置加载更多监听
+     *
+     * @param onLoadingListener
+     */
+    public void setOnLoadListener(OnLoadingListener onLoadingListener) {
+        this.onLoadingListener = onLoadingListener;
+    }
+
+    public interface OnLoadingListener {
+
+        /**
+         * 加载更多
+         */
+        void onLoading();
+
+    }
+
+    /**
+     * 混合Item
+     *
+     * @param <T>
+     */
+    public static class Complex<T> {
+
+        /**
+         * 是否支持侧滑
+         */
+        private boolean swipe;
+        /**
+         * 普通item
+         */
+        private T item;
+        /**
+         * 额外Item
+         */
+        private Extra extra;
+
+        public Complex(Extra extra) {
+            this.extra = extra;
+        }
+
+        public Complex(T item, boolean swipe) {
+            this.item = item;
+            this.swipe = swipe;
+        }
+
+        public boolean isSwipe() {
+            return swipe;
+        }
+
+        public void setSwipe(boolean swipe) {
+            this.swipe = swipe;
+        }
+
+        public T getItem() {
+            return item;
+        }
+
+        public void setItem(T item) {
+            this.item = item;
+        }
+
+        public Extra getExtra() {
+            return extra;
+        }
+
+        public void setExtra(Extra extra) {
+            this.extra = extra;
+        }
+
+    }
+
+    public static class Extra {
+
+        /**
+         * 视图类型 {@link #EXTRA_HEADER} or {@link #EXTRA_FOOTER} or {@link #EXTRA_LOADING}
+         */
+        private int viewType;
+
+        public Extra(int viewType) {
+            this.viewType = viewType;
+        }
+
+        public int getViewType() {
+            return viewType;
+        }
     }
 
 }

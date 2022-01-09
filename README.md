@@ -1,6 +1,7 @@
 # SwipeRecyclerView
-支持侧滑菜单、长按拖拽、Header、Footer
-
+支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)
+## RecyclerAdapter
+使用方法，请查看[GitHub-RecyclerAdapter](https://github.com/RelinRan/RecyclerAdapter)
 ## Maven
 1.build.grade
 ```
@@ -14,10 +15,10 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-	implementation 'com.github.RelinRan:SwipeRecyclerView:2021.12.26.1'
+	implementation 'com.github.RelinRan:SwipeRecyclerView:2022.1.9.1'
 }
 ```
-## 使用方法
+## 侧滑功能
 ### 1.xml布局
 ```
 <com.androidx.widget.SwipeRecyclerView
@@ -25,146 +26,212 @@ dependencies {
   android:layout_width="match_parent"
   android:layout_height="match_parent" />
 ```
-### 2.页面代码
+### 2.Adapter
+注意：继承RecyclerAdapter ，<String>为item泛型
 ```
-rv_content = findViewById(R.id.rv_content);
-rv_content.setLayoutManager(new LinearLayoutManager(context));
-//设置可以长按拖拽
-rv_content.setLongPressDragEnabled(true);
-//设置可以侧滑显示菜单
-rv_content.setSwipeMenuEnable(true);
-//继承RecyclerAdapter实现的SwipeAdapter
-SwipeAdapter adapter = new SwipeAdapter(this);
-adapter.setOnItemClickListener(new SwipeItemClick());
-rv_content.setAdapter(adapter);
+public class SwipeItemAdapter extends RecyclerAdapter<String> {
 
-private class SwipeItemClick implements RecyclerAdapter.OnItemClickListener<String>{
+   public SwipeItemAdapter(Context context) {
+       super(context);
+   }
+
     @Override
-    public void onItemClick(RecyclerAdapter<String> adapter, View v, int position) {
-       if (v.getId() == R.id.tv_delete) {
-            adapter.removeItem(position);
-            //操作完毕，必须调用关闭菜单栏
-            rv_content.closeSwipeMenu();
-       } else if (v.getId() == R.id.tv_edit) {
-            //操作完毕，必须调用关闭菜单栏
-            rv_content.closeSwipeMenu();
-        }
-     }
-}
-```
-### 3.侧滑菜单 + itemView
-注意：必须继承 RecyclerAdapter重写getItemSwipeMenuLayoutResId() 和 getItemLayoutResId();
-```
-    private class ItemAdapter extends RecyclerAdapter<String> {
-
-        public ItemAdapter(Context context) {
-            super(context);
-        }
-
-        @Override
-        public int getHeaderLayoutResId() {
-            //TODO:头部布局
-            return R.layout.androidx_item_header;
-        }
-
-        @Override
-        protected void onHeaderBindViewHolder(ViewHolder holder, int position) {
-            super.onHeaderBindViewHolder(holder, position);
-            // TODO:头部布局数据绑定
-            holder.addItemClick(R.id.btn_header);
-            holder.find(Button.class,R.id.btn_header).setText("Header - "+getItem(position));
-        }
-
-        @Override
-        public int getFooterLayoutResId() {
-            //TODO:脚部布局
-            return  R.layout.androidx_item_footer;
-        }
-
-        @Override
-        protected void onFooterBindViewHolder(ViewHolder holder, int position) {
-            super.onFooterBindViewHolder(holder, position);
-            //TODO:脚部布局数据绑定
-            holder.find(Button.class,R.id.btn_footer).setText("Footer - "+getItem(position));
-            holder.addItemClick(R.id.btn_footer);
-        }
-
-        @Override
-        protected int getItemSwipeMenuLayoutResId() {
-            //TODO:侧滑Item布局
-            return R.layout.android_menu;
-        }
-
-        @Override
-        protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
-            super.onSwipeBindViewHolder(holder, position);
-            //TODO:侧滑Ite布局数据绑定
-            holder.addItemClick(R.id.btn_item_name);
-            holder.addItemClick(R.id.tv_delete);
-            holder.addItemClick(R.id.tv_edit);
-            holder.find(TextView.class, R.id.btn_item_name).setText(getItem(position));
-        }
-
-        @Override
-        protected int getItemLayoutResId(int viewType) {
-            //TODO:普通item布局
-            return R.layout.androidx_items;
-        }
-
-        @Override
-        protected void onItemBindViewHolder(ViewHolder holder, int position) {
-            //TODO:普通item布局数据绑定
-        }
-
+    protected int getItemLayoutResId(int viewType) {
+       // TODO: 普通Item布局 
+       return R.layout.item_text;
     }
 
+    @Override
+    protected int getItemSwipeMenuLayoutResId() {
+        // TODO: 侧滑菜单栏布局（例如：编辑、删除）
+        // 注意xml高度:MATCH_PARENT，宽度：WRAP_CONTENT
+        return R.layout.item_swipe_menu;
+    }
+
+    @Override
+    protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
+       super.onSwipeBindViewHolder(holder, position);
+       // TODO: 普通Item + 侧滑view数据绑定逻辑
+       holder.addItemClick(R.id.tv_delete);
+       holder.addItemClick(R.id.tv_edit);
+       TextView textView = holder.find(R.id.tv_item_text);
+       textView.setText(getItem(position));
+    }
+
+}
 ```
-### 常用方法
-1.获取触摸事件助手
+### 3.Activity|Fragment
+```
+rv_content = findViewById(R.id.rv_content);
+//设置侧滑菜单可用，此方法需要SwipeItemAdapter.setShowSwipe(true);
+rv_content.setSwipeEnable(false);
+//适配器
+SwipeItemAdapter adapter = new SwipeItemAdapter(this);
+//设置侧滑菜单可用
+adapter.setShowSwipe(true);
+//设置此方法之前，在SwipeItemAdapter中holder.addItemClick(R.id.xxx);
+adapter.setOnItemClickListener((adapter, v, position) -> {
+     switch (v.getId()){
+         case R.id.tv_edit:
+
+         break;
+         case R.id.tv_delete:
+            adapter.removeItem(position);
+            //注意：删除item,一定需要调用此方法。
+            rv_content.closeSwipe();
+            break;
+         }
+});
+```
+## 长按拖拽
+### 1.RecyclerView
+```
+RecyclerView rv_content = findViewById(R.id.rv_content);
+SwipeItemTouchHelperCallback callback = new SwipeItemTouchHelperCallback();
+ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
+touchHelper.attachToRecyclerView(rv_content);
+```
+### 2.SwipeRecyclerView
+```
+SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
+rv_content.setLongPressDragEnabled(true);
+```
+## Header功能
+Header功能支持SwipeRecyclerView、RecyclerView
+### 1.代码设置
+```
+SwipeItemAdapter adapter = new SwipeItemAdapter(this);
+adapter.setHeaderArgs(xxxx);
+View headerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
+adapter.setHeaderView(headerView);
+```
+### 2.Xml设置
+```
+public class SwipeItemAdapter extends RecyclerAdapter<String> {
+
+    public SwipeItemAdapter(Context context) {
+        super(context);
+    }
+
+    @Override
+    public int getHeaderLayoutResId() {
+        // TODO: Header布局
+        return R.layout.xxx;
+    }
+
+    @Override
+    protected void onHeaderBindViewHolder(ViewHolder holder, Bundle args) {
+       super.onHeaderBindViewHolder(holder, args);
+       // TODO: Header数据绑定逻辑,args数据来源于setHeaderArgs(xxx);
+    }
+}
+```
+## Footer功能
+Footer功能支持SwipeRecyclerView、RecyclerView
+### 1.代码设置
+```
+SwipeItemAdapter adapter = new SwipeItemAdapter(this);
+adapter.setFooterArgs(xxx);
+View footerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
+adapter.setFooterView(footerView);
+```
+### 2.Xml设置
+```
+public class SwipeItemAdapter extends RecyclerAdapter<String> {
+
+    public SwipeItemAdapter(Context context) {
+        super(context);
+    }
+
+    @Override
+    public int getFooterLayoutResId() {
+        // TODO: Header布局
+        return R.layout.xxx;
+    }
+
+    @Override
+    protected void onFooterBindViewHolder(ViewHolder holder, Bundle args) {
+       super.onFooterBindViewHolder(holder, args);
+       // TODO: Footer数据绑定逻辑,args数据来源于setFooterArgs(xxx);
+    }
+}
+```
+## Loading功能(加载更多)
+Loading功能支持SwipeRecyclerView、RecyclerView
+### 1.代码设置
+```
+SwipeItemAdapter adapter = new SwipeItemAdapter(this);
+adapter.setLoadingArgs(xxxx);
+View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
+adapter.setFooterView(loadingView);
+```
+### 2.Xml设置
+```
+public class SwipeItemAdapter extends RecyclerAdapter<String> {
+
+    public SwipeItemAdapter(Context context) {
+        super(context);
+    }
+
+    @Override
+    public int getLoadingLayoutResId() {
+        // TODO: Loading布局
+        return R.layout.xxx;
+    }
+
+    @Override
+    protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
+       super.onLoadingBindViewHolder(holder, args);
+       // TODO: Loading数据绑定逻辑,args数据来源于setLoadingArgs(xxx);
+    }
+}
+```
+## Api方法
+### 1.获取触摸事件助手
 ```
  ItemTouchHelper getItemTouchHelper();
 ```
-2.设置Item触摸助手回调
+### 2.设置Item触摸助手回调
 ```
  setSwipeItemTouchHelperCallback(SwipeItemTouchHelperCallback callback);
 ```
-3.设置是否自动处理移动逻辑
+### 3.设置是否自动处理移动逻辑
 ```
 setDragMoveAuto(boolean dragMoveAuto);
 ```
-4.设置是否自动处理选择逻辑
+### 4.设置是否自动处理选择逻辑
 ```
 setSelectedAuto(boolean selectedAuto);
 ```
-5.设置是否可长按拖拽
+### 5.设置是否可长按拖拽
 ```
 setLongPressDragEnabled(boolean longPressDragEnabled) ;
 ```
-6.设置拖动标识
+### 6.设置拖动标识
 ```
 setDragFlags(int dragFlags);
 ```
-7.设置滑动标识
+### 7.设置滑动标识
 ```
 setSwipeFlags(int swipeFlags);
 ```
-8.设置触摸选中监听
+### 8.设置触摸选中监听
 ```
 setOnItemTouchSelectedChangedListener(OnItemTouchSelectedChangedListener listener);
 ```
-9.设置长按拖拽移动监听
+### 9.设置长按拖拽移动监听
 ```
 setOnItemTouchMoveListener(OnItemTouchMoveListener listener);
 ```
-10.触摸横向滑动完成监听
+### 10.触摸横向滑动完成监听
 ```
 setOnItemTouchSwipedListener(OnItemTouchSwipedListener  listener);
 ```
-11.打开侧滑菜单
+### 11.打开侧滑菜单
 ```
-openSwipeMenu();
+openSwipe();
 ```
-12.关闭侧滑菜单
+### 12.关闭侧滑菜单
 ```
-closeSwipeMenu();
+closeSwipe();
 ```

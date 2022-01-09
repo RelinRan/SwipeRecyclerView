@@ -133,12 +133,14 @@ public class SwipeItemTouchHelperCallback extends ItemTouchHelper.Callback {
     }
 
     @Override
-    public int getMovementFlags(@NonNull  RecyclerView recyclerView, @NonNull  RecyclerView.ViewHolder viewHolder) {
+    public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+        int position = viewHolder.getAdapterPosition();
+        dragFlags = longPressDragEnabled ? dragFlags : 0;
         return makeMovementFlags(dragFlags, swipeFlags);
     }
 
     @Override
-    public boolean onMove(@NonNull  RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull  RecyclerView.ViewHolder target) {
+    public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
         this.recyclerView = recyclerView;
         if (isDragMoveAuto()) {
             fromPosition = viewHolder.getAdapterPosition();

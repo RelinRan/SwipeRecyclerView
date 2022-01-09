@@ -5,6 +5,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.widget.OverScroller;
 
 import androidx.annotation.NonNull;
@@ -27,7 +28,6 @@ public class SwipeRecyclerView extends RecyclerView {
     //RecyclerView itemView容器
     private View itemLayout;
     //RecyclerView itemView
-    private View itemView;
     //菜单容器
     private View menuLayout;
     //菜单View
@@ -35,15 +35,20 @@ public class SwipeRecyclerView extends RecyclerView {
     //菜单宽度
     private int menuWidth = 0;
     //滑动菜单是否打开
-    private boolean swipeMenuOpen;
+    private boolean swipeOpen;
     //滑动菜单是否可用
-    private boolean swipeMenuEnable = true;
+    private boolean swipeEnable = true;
     //是否可长按拖动
     private boolean longPressDragEnabled;
     //触摸滑动监听
     private OnItemTouchSwipedListener onItemTouchSwipedListener;
-
+    //移动极限
+    private int scaledTouchSlop;
+    //item位置
+    private int itemCount = 0;
+    //触摸助手
     private ItemTouchHelper touchHelper;
+    //侧滑助手
     private SwipeItemTouchHelperCallback callback;
 
     public SwipeRecyclerView(@NonNull Context context) {
@@ -67,6 +72,7 @@ public class SwipeRecyclerView extends RecyclerView {
         touchHelper.attachToRecyclerView(this);
         scroller = new OverScroller(context);
         velocityTracker = VelocityTracker.obtain();
+        scaledTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
     }
 
     /**
@@ -88,7 +94,7 @@ public class SwipeRecyclerView extends RecyclerView {
     }
 
     /**
-     * 设置Item触摸监听
+     * 设置Item触摸助手回调
      *
      * @param callback
      */
@@ -176,7 +182,7 @@ public class SwipeRecyclerView extends RecyclerView {
     }
 
     /**
-     * 设置长按拖拽监听
+     * 设置长按拖拽移动监听
      *
      * @param onItemTouchMoveListener
      */
@@ -188,6 +194,13 @@ public class SwipeRecyclerView extends RecyclerView {
 
     public interface OnItemTouchMoveListener {
 
+        /**
+         * 长按拖拽移动监听
+         *
+         * @param recyclerView
+         * @param viewHolder
+         * @param target
+         */
         void onItemOnItemTouchMove(RecyclerView recyclerView, ViewHolder viewHolder, ViewHolder target);
 
     }
@@ -205,12 +218,18 @@ public class SwipeRecyclerView extends RecyclerView {
 
     public interface OnItemTouchSelectedChangedListener {
 
+        /**
+         * 触摸选择改变监听
+         *
+         * @param viewHolder
+         * @param actionState
+         */
         void onItemTouchSelectedChanged(@Nullable ViewHolder viewHolder, int actionState);
 
     }
 
     /**
-     * 触摸滑动监听
+     * 触摸横向滑动完成监听
      *
      * @param onItemTouchSwipedListener
      */
@@ -223,28 +242,83 @@ public class SwipeRecyclerView extends RecyclerView {
 
     public interface OnItemTouchSwipedListener {
 
+        /**
+         * 滑动监听
+         *
+         * @param viewHolder
+         * @param direction
+         */
         void onItemTouchSwiped(@NonNull ViewHolder viewHolder, int direction);
 
     }
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent e) {
-        if (isSwipeMenuClose()) {
-            childView = findChildViewUnder(e.getX(), e.getY());
-            if (childView != null && getAdapter() instanceof RecyclerAdapter) {
-                RecyclerAdapter adapter = (RecyclerAdapter) getAdapter();
-                if (adapter.isHasSwipeMenu()) {
-                    itemLayout = adapter.findSwipeItemLayout(childView);
-                    itemView = adapter.findSwipeItemView(childView);
-                    menuLayout = adapter.findSwipeMenuLayout(childView);
-                    menuView = adapter.findSwipeMenuView(childView);
-                    menuWidth = menuView.getMeasuredWidth();
-                }
-            }
-        }
+        touchSwipeEvent(e);
+        return super.onInterceptTouchEvent(e);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        touchSwipeEvent(e);
+        return super.onTouchEvent(e);
+    }
+
+    /**
+     * Item触摸监听
+     */
+    private OnTouchItemListener onTouchItemListener;
+
+    /**
+     * 设置Item触摸监听
+     *
+     * @param onTouchItemListener
+     */
+    public void setOnTouchItemListener(OnTouchItemListener onTouchItemListener) {
+        this.onTouchItemListener = onTouchItemListener;
+    }
+
+    public interface OnTouchItemListener {
+
+        /**
+         * 设置Item触摸
+         *
+         * @param e            事件
+         * @param recyclerView 列表view
+         * @param adapter      适配器
+         * @param childView    itemView
+         */
+        void onTouchItem(MotionEvent e, SwipeRecyclerView recyclerView, RecyclerAdapter adapter, View childView);
+
+    }
+
+    /**
+     * 触摸事件处理
+     *
+     * @param e
+     */
+    protected void touchSwipeEvent(MotionEvent e) {
         velocityTracker.addMovement(e);
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                if (isSwipeClose()) {
+                    childView = findChildViewUnder(e.getX(), e.getY());
+                    if (childView != null) {
+                        if (getAdapter() instanceof RecyclerAdapter) {
+                            RecyclerAdapter adapter = (RecyclerAdapter) getAdapter();
+                            if (adapter.isHasSwipe()) {
+                                setSwipeOpen(adapter.isSwipeEnable());
+                                itemLayout = adapter.findSwipeItemLayout(childView);
+                                menuLayout = adapter.findSwipeMenuLayout(childView);
+                                menuView = adapter.findSwipeMenuView(childView);
+                                menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
+                                if (onTouchItemListener != null) {
+                                    onTouchItemListener.onTouchItem(e, this, adapter, childView);
+                                }
+                            }
+                        }
+                    }
+                }
                 downX = e.getX();
                 downY = e.getY();
                 if (!scroller.isFinished()) {
@@ -252,29 +326,33 @@ public class SwipeRecyclerView extends RecyclerView {
                 }
                 scroller = new OverScroller(getContext());
                 break;
-            case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_MOVE:
-                float mx = e.getX() - downX;
-                float my = e.getY() - downY;
-                if (isSwipeMenuEnable() && e.getPointerCount() < 2) {
+                float distanceX = e.getX() - downX;
+                float distanceY = e.getY() - downY;
+                if (isSwipeEnable() && e.getPointerCount() < 2) {
                     velocityTracker.computeCurrentVelocity((int) (menuWidth * 0.1F), menuWidth);
                     //水平滑动
-                    if (Math.abs(mx) > Math.abs(my) && Math.abs(mx) > 10) {
+                    if (Math.abs(distanceX) > Math.abs(distanceY) && Math.abs(distanceX) > scaledTouchSlop) {
+                        if (getParent() != null) {
+                            getParent().requestDisallowInterceptTouchEvent(true);
+                        }
                         if (velocityTracker.getXVelocity() < 10) {
-                            smoothSwipeLayoutBy(mx);
+                            smoothSwipeLayoutBy(distanceX);
                         } else {
-                            scroller.startScroll(scroller.getFinalX(), 0, (int) mx, 0, 250);
+                            scroller.startScroll(scroller.getFinalX(), 0, (int) distanceX, 0, 250);
                             invalidate();
                         }
                     }
                     //垂直滑动
-                    if (Math.abs(mx) < Math.abs(my) && Math.abs(my) > 10) {
-                        closeSwipeMenu();
+                    if (Math.abs(distanceX) < Math.abs(distanceY) && Math.abs(distanceY) > scaledTouchSlop) {
+                        closeSwipe();
                     }
                 }
                 break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                break;
         }
-        return super.onInterceptTouchEvent(e);
     }
 
     /**
@@ -282,17 +360,17 @@ public class SwipeRecyclerView extends RecyclerView {
      *
      * @return
      */
-    public boolean isSwipeMenuEnable() {
-        return swipeMenuEnable;
+    public boolean isSwipeEnable() {
+        return swipeEnable;
     }
 
     /**
      * 设置滑动菜单是否可用
      *
-     * @param swipeMenuEnable
+     * @param swipeEnable
      */
-    public void setSwipeMenuEnable(boolean swipeMenuEnable) {
-        this.swipeMenuEnable = swipeMenuEnable;
+    public void setSwipeEnable(boolean swipeEnable) {
+        this.swipeEnable = swipeEnable;
     }
 
     /**
@@ -300,8 +378,8 @@ public class SwipeRecyclerView extends RecyclerView {
      *
      * @return
      */
-    public boolean isSwipeMenuOpen() {
-        return swipeMenuOpen;
+    public boolean isSwipeOpen() {
+        return swipeOpen;
     }
 
     /**
@@ -309,19 +387,19 @@ public class SwipeRecyclerView extends RecyclerView {
      *
      * @return
      */
-    public boolean isSwipeMenuClose() {
-        return !swipeMenuOpen;
+    public boolean isSwipeClose() {
+        return !swipeOpen;
     }
 
     /**
-     * 设置滑动菜单
+     * 设置滑动菜单是否打开
      *
-     * @param swipeMenuOpen
+     * @param swipeOpen
      */
-    public void setSwipeMenuOpen(boolean swipeMenuOpen) {
-        this.swipeMenuOpen = swipeMenuOpen;
+    public void setSwipeOpen(boolean swipeOpen) {
+        this.swipeOpen = swipeOpen;
         if (onItemTouchSwipedListener != null && childView != null) {
-            onItemTouchSwipedListener.onItemTouchSwiped(getChildViewHolder(childView), swipeMenuOpen ? -1 : 1);
+            onItemTouchSwipedListener.onItemTouchSwiped(getChildViewHolder(childView), swipeOpen ? -1 : 1);
         }
     }
 
@@ -331,32 +409,36 @@ public class SwipeRecyclerView extends RecyclerView {
      * @param mx 横向移动距离
      */
     public void smoothSwipeLayoutBy(float mx) {
-        float itemLayoutX = itemLayout.getTranslationX() + mx;
-        if (itemLayoutX > -menuWidth && itemLayoutX < 0) {
-            setSwipeItemLayoutTranslationX(itemLayoutX);
-            setSwipeMenuOpen(true);
-        }
-        if (itemLayoutX <= -menuWidth) {
-            setSwipeItemLayoutTranslationX(-menuWidth);
-            setSwipeMenuOpen(true);
-        }
-        if (itemLayoutX >= 0) {
-            setSwipeItemLayoutTranslationX(0);
-            setSwipeMenuOpen(false);
+        if (itemLayout != null) {
+            float itemLayoutX = itemLayout.getTranslationX() + mx;
+            if (itemLayoutX > -menuWidth && itemLayoutX < 0) {
+                setSwipeItemLayoutTranslationX(itemLayoutX);
+                setSwipeOpen(true);
+            }
+            if (itemLayoutX <= -menuWidth) {
+                setSwipeItemLayoutTranslationX(-menuWidth);
+                setSwipeOpen(true);
+            }
+            if (itemLayoutX >= 0) {
+                setSwipeItemLayoutTranslationX(0);
+                setSwipeOpen(false);
+            }
         }
         //菜单布局
-        float menuLayoutX = menuLayout.getTranslationX() + mx;
-        if (menuLayoutX > 0 && menuLayoutX < menuWidth) {
-            setSwipeMenuLayoutTranslationX(menuLayoutX);
-            setSwipeMenuOpen(true);
-        }
-        if (menuLayoutX <= 0) {
-            setSwipeMenuLayoutTranslationX(0);
-            setSwipeMenuOpen(true);
-        }
-        if (menuLayoutX >= menuWidth) {
-            setSwipeMenuLayoutTranslationX(menuWidth);
-            setSwipeMenuOpen(false);
+        if (menuLayout != null) {
+            float menuLayoutX = menuLayout.getTranslationX() + mx;
+            if (menuLayoutX > 0 && menuLayoutX < menuWidth) {
+                setSwipeMenuLayoutTranslationX(menuLayoutX);
+                setSwipeOpen(true);
+            }
+            if (menuLayoutX <= 0) {
+                setSwipeMenuLayoutTranslationX(0);
+                setSwipeOpen(true);
+            }
+            if (menuLayoutX >= menuWidth) {
+                setSwipeMenuLayoutTranslationX(menuWidth);
+                setSwipeOpen(false);
+            }
         }
     }
 
@@ -366,6 +448,9 @@ public class SwipeRecyclerView extends RecyclerView {
      * @param translationX
      */
     public void setSwipeItemLayoutTranslationX(float translationX) {
+        if (itemLayout == null) {
+            return;
+        }
         itemLayout.setTranslationX(translationX);
     }
 
@@ -375,33 +460,35 @@ public class SwipeRecyclerView extends RecyclerView {
      * @param translationX
      */
     public void setSwipeMenuLayoutTranslationX(float translationX) {
+        if (menuLayout == null) {
+            return;
+        }
         menuLayout.setTranslationX(translationX);
     }
 
     /**
-     * 关闭滑动菜单
+     * 关闭侧滑菜单
      */
-    public void closeSwipeMenu() {
-        if (isSwipeMenuOpen()) {
-            if (itemView != null) {
+    public void closeSwipe() {
+        if (isSwipeOpen()) {
+            if (itemLayout != null) {
                 setSwipeItemLayoutTranslationX(0);
                 setSwipeMenuLayoutTranslationX(menuWidth);
             }
-            setSwipeMenuOpen(false);
+            setSwipeOpen(false);
         }
     }
 
-
     /**
-     * 打开滑动菜单
+     * 打开侧滑菜单
      */
     public void openSwipeMenu() {
-        if (isSwipeMenuClose()) {
-            if (itemView != null) {
+        if (isSwipeClose()) {
+            if (itemLayout != null) {
                 setSwipeItemLayoutTranslationX(-menuWidth);
                 setSwipeMenuLayoutTranslationX(0);
             }
-            setSwipeMenuOpen(true);
+            setSwipeOpen(true);
         }
     }
 
@@ -409,7 +496,7 @@ public class SwipeRecyclerView extends RecyclerView {
     public void computeScroll() {
         super.computeScroll();
         if (scroller.computeScrollOffset()) {
-            if (itemView == null) {
+            if (itemLayout == null) {
                 return;
             }
             int currX = scroller.getCurrX();
@@ -419,7 +506,7 @@ public class SwipeRecyclerView extends RecyclerView {
             }
             //右滑 - Close
             if (currX > 0) {
-                closeSwipeMenu();
+                closeSwipe();
             }
         }
     }

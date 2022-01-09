@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <attr name="lineWidth" format="dimension" />
+    <attr name="lineColor" format="color" />
+    <attr name="lineLength" format="dimension" />
+    <attr name="lineAlpha" format="integer" />
+
+    <declare-styleable name="Placeholder">
+        <attr name="android:text" format="string" />
+        <attr name="android:textSize" format="dimension" />
+        <attr name="android:textColor" format="color" />
+        <attr name="android:strokeWidth" format="color" />
+        <attr name="android:src" format="reference|color" />
+        <attr name="textMarginTop" format="dimension" />
+        <attr name="textMarginBottom" format="dimension" />
+        <attr name="textMarginVertical" format="dimension" />
+    </declare-styleable>
+
+    <declare-styleable name="LoadingView">
+        <attr name="android:radius" format="dimension" />
+        <attr name="android:duration" format="integer" />
+        <attr name="android:angle" format="float" />
+        <attr name="lineWidth" />
+        <attr name="lineColor" />
+        <attr name="lineLength" />
+        <attr name="lineAlpha"/>
+    </declare-styleable>
+
+    <declare-styleable name="SwipeLoadingLayout">
+        <attr name="android:text" format="string" />
+        <attr name="android:textSize" format="dimension" />
+        <attr name="android:textColor" format="color" />
+        <attr name="android:radius" format="dimension" />
+        <attr name="android:duration" format="integer" />
+        <attr name="android:angle" format="float" />
+        <attr name="lineWidth" />
+        <attr name="lineColor" />
+        <attr name="lineLength" />
+        <attr name="lineAlpha"/>
+        <attr name="more" format="string" />
+        <attr name="empty" format="string" />
+        <attr name="loadingMarginRight" format="dimension" />
+    </declare-styleable>
+
+    <declare-styleable name="SwipeRefreshLayout">
+        <attr name="swipeRefreshCircleBackgroundColor" format="color" />
+    </declare-styleable>
+
+</resources>
