@@ -18,6 +18,7 @@ dependencies {
 	implementation 'com.github.RelinRan:SwipeRecyclerView:2022.1.9.1'
 }
 ```
+
 ## 侧滑功能
 ### 1.xml布局
 ```
