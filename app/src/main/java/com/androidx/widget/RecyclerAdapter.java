@@ -1056,7 +1056,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public void addItems(List<T> sources) {
         int count = sources == null ? 0 : sources.size();
         for (int i = 0; i < count; i++) {
-            dataSources.add((T) new Complex(sources.get(i), isSwipeEnable()));
+            dataSources.add(sources.get(i));
         }
         setDataSource(dataSources, false);
         int positionStart = getItemCount() - 1;
