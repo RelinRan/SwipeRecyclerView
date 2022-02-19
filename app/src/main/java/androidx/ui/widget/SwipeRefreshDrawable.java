@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;

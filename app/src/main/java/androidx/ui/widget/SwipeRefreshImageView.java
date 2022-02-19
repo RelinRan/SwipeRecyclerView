@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -33,6 +33,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.view.ViewCompat;
+
+import com.androidx.widget.R;
 
 /**
  * 创建私有类以解决 AnimationListeners 的问题
@@ -77,7 +79,7 @@ public class SwipeRefreshImageView extends AppCompatImageView {
 
     private void initAttributeSet(Context context,AttributeSet attrs){
         mShadowRadius = (int) (density * SHADOW_RADIUS);
-        TypedArray array = context.obtainStyledAttributes(attrs,R.styleable.SwipeRefreshLayout);
+        TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.SwipeRefreshLayout);
         mBackgroundColor = array.getColor(R.styleable.SwipeRefreshLayout_swipeRefreshCircleBackgroundColor, DEFAULT_BACKGROUND_COLOR);
         array.recycle();
         if (elevationSupported()) {

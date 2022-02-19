@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -15,14 +15,14 @@ import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.Nullable;
 
+import com.androidx.widget.R;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Author: Relin
- * Description:数据加载
- * Date:2020/12/14 22:01
+ * 数据加载
  */
 public class LoadingView extends View implements ValueAnimator.AnimatorUpdateListener {
 
@@ -103,7 +103,7 @@ public class LoadingView extends View implements ValueAnimator.AnimatorUpdateLis
     }
 
     private void initAttributeSet(Context context, AttributeSet attrs) {
-        if (attrs!=null){
+        if (attrs != null) {
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.LoadingView);
             radius = array.getDimension(R.styleable.LoadingView_android_radius, radius);
             lineColor = array.getColor(R.styleable.LoadingView_lineColor, lineColor);

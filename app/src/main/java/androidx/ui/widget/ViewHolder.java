@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.view.View;
 

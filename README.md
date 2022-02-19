@@ -1,7 +1,7 @@
 # SwipeRecyclerView
 支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)
-## RecyclerAdapter
-使用方法，请查看[GitHub-RecyclerAdapter](https://github.com/RelinRan/RecyclerAdapter)
+## SwipeRecyclerAdapter
+使用方法，请查看[GitHub-SwipeRecyclerAdapter](https://github.com/RelinRan/SwipeRecyclerAdapter)
 ## Maven
 1.build.grade
 ```
@@ -15,22 +15,22 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-	implementation 'com.github.RelinRan:SwipeRecyclerView:2022.1.9.1'
+	implementation 'com.github.RelinRan:SwipeRecyclerView:2022.2.20.1'
 }
 ```
 
 ## 侧滑功能
-### 1.xml布局
+### xml布局
 ```
-<com.androidx.widget.SwipeRecyclerView
+<androidx.ui.widget.SwipeRecyclerView
   android:id="@+id/rv_content"
   android:layout_width="match_parent"
   android:layout_height="match_parent" />
 ```
-### 2.Adapter
-注意：继承RecyclerAdapter ，<String>为item泛型
+### Adapter
+注意：继承SwipeRecyclerAdapter ，<String>为item泛型
 ```
-public class SwipeItemAdapter extends RecyclerAdapter<String> {
+public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
    public SwipeItemAdapter(Context context) {
        super(context);
@@ -61,7 +61,7 @@ public class SwipeItemAdapter extends RecyclerAdapter<String> {
 
 }
 ```
-### 3.Activity|Fragment
+### Activity|Fragment
 ```
 rv_content = findViewById(R.id.rv_content);
 //设置侧滑菜单可用，此方法需要SwipeItemAdapter.setShowSwipe(true);
@@ -85,30 +85,30 @@ adapter.setOnItemClickListener((adapter, v, position) -> {
 });
 ```
 ## 长按拖拽
-### 1.RecyclerView
+### RecyclerView
 ```
 RecyclerView rv_content = findViewById(R.id.rv_content);
 SwipeItemTouchHelperCallback callback = new SwipeItemTouchHelperCallback();
 ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
 touchHelper.attachToRecyclerView(rv_content);
 ```
-### 2.SwipeRecyclerView
+### SwipeRecyclerView
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
 rv_content.setLongPressDragEnabled(true);
 ```
 ## Header功能
 Header功能支持SwipeRecyclerView、RecyclerView
-### 1.代码设置
+### 代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setHeaderArgs(xxxx);
 View headerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
 adapter.setHeaderView(headerView);
 ```
-### 2.Xml设置
+### Xml设置
 ```
-public class SwipeItemAdapter extends RecyclerAdapter<String> {
+public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
     public SwipeItemAdapter(Context context) {
         super(context);
@@ -129,16 +129,16 @@ public class SwipeItemAdapter extends RecyclerAdapter<String> {
 ```
 ## Footer功能
 Footer功能支持SwipeRecyclerView、RecyclerView
-### 1.代码设置
+### 代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setFooterArgs(xxx);
 View footerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
 adapter.setFooterView(footerView);
 ```
-### 2.Xml设置
+### Xml设置
 ```
-public class SwipeItemAdapter extends RecyclerAdapter<String> {
+public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
     public SwipeItemAdapter(Context context) {
         super(context);
@@ -159,16 +159,16 @@ public class SwipeItemAdapter extends RecyclerAdapter<String> {
 ```
 ## Loading功能(加载更多)
 Loading功能支持SwipeRecyclerView、RecyclerView
-### 1.代码设置
+### 代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setLoadingArgs(xxxx);
 View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
 adapter.setFooterView(loadingView);
 ```
-### 2.Xml设置
+### Xml设置
 ```
-public class SwipeItemAdapter extends RecyclerAdapter<String> {
+public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
     public SwipeItemAdapter(Context context) {
         super(context);
@@ -187,52 +187,51 @@ public class SwipeItemAdapter extends RecyclerAdapter<String> {
     }
 }
 ```
-## Api方法
-### 1.获取触摸事件助手
+## 获取触摸事件助手
 ```
  ItemTouchHelper getItemTouchHelper();
 ```
-### 2.设置Item触摸助手回调
+## 设置Item触摸助手回调
 ```
  setSwipeItemTouchHelperCallback(SwipeItemTouchHelperCallback callback);
 ```
-### 3.设置是否自动处理移动逻辑
+## 设置是否自动处理移动逻辑
 ```
 setDragMoveAuto(boolean dragMoveAuto);
 ```
-### 4.设置是否自动处理选择逻辑
+## 设置是否自动处理选择逻辑
 ```
 setSelectedAuto(boolean selectedAuto);
 ```
-### 5.设置是否可长按拖拽
+## 设置是否可长按拖拽
 ```
 setLongPressDragEnabled(boolean longPressDragEnabled) ;
 ```
-### 6.设置拖动标识
+## 设置拖动标识
 ```
 setDragFlags(int dragFlags);
 ```
-### 7.设置滑动标识
+## 设置滑动标识
 ```
 setSwipeFlags(int swipeFlags);
 ```
-### 8.设置触摸选中监听
+## 设置触摸选中监听
 ```
 setOnItemTouchSelectedChangedListener(OnItemTouchSelectedChangedListener listener);
 ```
-### 9.设置长按拖拽移动监听
+## 设置长按拖拽移动监听
 ```
 setOnItemTouchMoveListener(OnItemTouchMoveListener listener);
 ```
-### 10.触摸横向滑动完成监听
+## 触摸横向滑动完成监听
 ```
 setOnItemTouchSwipedListener(OnItemTouchSwipedListener  listener);
 ```
-### 11.打开侧滑菜单
+## 打开侧滑菜单
 ```
 openSwipe();
 ```
-### 12.关闭侧滑菜单
+## 关闭侧滑菜单
 ```
 closeSwipe();
 ```

@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -145,8 +145,8 @@ public class SwipeItemTouchHelperCallback extends ItemTouchHelper.Callback {
         if (isDragMoveAuto()) {
             fromPosition = viewHolder.getAdapterPosition();
             toPosition = target.getAdapterPosition();
-            if (recyclerView.getAdapter() instanceof RecyclerAdapter) {
-                RecyclerAdapter adapter = (RecyclerAdapter) recyclerView.getAdapter();
+            if (recyclerView.getAdapter() instanceof SwipeRecyclerAdapter) {
+                SwipeRecyclerAdapter adapter = (SwipeRecyclerAdapter) recyclerView.getAdapter();
                 adapter.swapItem(fromPosition, toPosition);
             }
         }

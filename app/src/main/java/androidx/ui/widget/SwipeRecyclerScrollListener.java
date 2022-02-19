@@ -1,11 +1,11 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import androidx.annotation.NonNull;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
 
 
-public class RecyclerScrollHelper extends RecyclerView.OnScrollListener implements NestedScrollView.OnScrollChangeListener {
+public class SwipeRecyclerScrollListener extends RecyclerView.OnScrollListener implements NestedScrollView.OnScrollChangeListener {
 
     private OnScrollListener onScrollListener;
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
 import android.content.res.TypedArray;

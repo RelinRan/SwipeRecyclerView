@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -288,7 +288,7 @@ public class SwipeRecyclerView extends RecyclerView {
          * @param adapter      适配器
          * @param childView    itemView
          */
-        void onTouchItem(MotionEvent e, SwipeRecyclerView recyclerView, RecyclerAdapter adapter, View childView);
+        void onTouchItem(MotionEvent e, SwipeRecyclerView recyclerView, SwipeRecyclerAdapter adapter, View childView);
 
     }
 
@@ -304,8 +304,8 @@ public class SwipeRecyclerView extends RecyclerView {
                 if (isSwipeClose()) {
                     childView = findChildViewUnder(e.getX(), e.getY());
                     if (childView != null) {
-                        if (getAdapter() instanceof RecyclerAdapter) {
-                            RecyclerAdapter adapter = (RecyclerAdapter) getAdapter();
+                        if (getAdapter() instanceof SwipeRecyclerAdapter) {
+                            SwipeRecyclerAdapter adapter = (SwipeRecyclerAdapter) getAdapter();
                             if (adapter.isHasSwipe()) {
                                 setSwipeOpen(adapter.isSwipeEnable());
                                 itemLayout = adapter.findSwipeItemLayout(childView);

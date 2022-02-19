@@ -1,6 +1,7 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -8,40 +9,25 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import androidx.annotation.ColorRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.androidx.widget.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Author: Relin
- * Describe:Recycler使用的基础Adapter
- * Date:2020/12/26 19:17
+ * Recycler使用的基础Adapter
  */
-public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements RecyclerScrollHelper.OnScrollListener,
-        ViewHolder.OnItemClickLister, ViewHolder.OnItemFocusChangeListener {
+public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter implements SwipeRecyclerScrollListener.OnScrollListener, ViewHolder.OnItemClickLister, ViewHolder.OnItemFocusChangeListener {
 
-    private final String TAG = "RecyclerAdapter";
     private final int MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT;
     private final int WRAP_CONTENT = ViewGroup.LayoutParams.WRAP_CONTENT;
-
-    /**
-     * Item视图 - 头部
-     */
-    public static final int EXTRA_HEADER = -1;
-    /**
-     * Item视图 - 脚部
-     */
-    public static final int EXTRA_FOOTER = -2;
-    /**
-     * Item视图 - 加载更多
-     */
-    public static final int EXTRA_LOADING = -3;
-
     /**
      * 侧滑item - ViewGroup
      */
@@ -60,11 +46,17 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     private Context context;
     /**
-     * 数据对象
+     * 混合数据集合
      */
-    private List<Complex<T>> complexSources;
-    private List<Extra> extraSources;
-    private List<T> dataSources;
+    private List<SwipeItem<T>> items;
+    /**
+     * 扩展数据集合
+     */
+    private List<SwipeExpansion> expansions;
+    /**
+     * 普通数据集合
+     */
+    private List<T> ordinaries;
     /**
      * 空视图
      */
@@ -106,7 +98,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 是否显示侧滑菜单
      */
-    private boolean showSwipe = true;
+    private boolean showSwipe = false;
     /**
      * 是否显示加载更多
      */
@@ -136,10 +128,26 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 滑动助手
      */
-    private RecyclerScrollHelper scrollHelper;
+    private SwipeRecyclerScrollListener scrollListener;
 
-    public RecyclerAdapter(Context context) {
+    public SwipeRecyclerAdapter(Context context) {
         this.context = context;
+    }
+
+    /**
+     * @param id 颜色Id
+     * @return 颜色
+     */
+    public int getColor(@ColorRes int id) {
+        return getContext().getResources().getColor(id);
+    }
+
+    /**
+     * @param color 颜色字符
+     * @return 颜色
+     */
+    public int parseColor(String color) {
+        return Color.parseColor(color);
     }
 
     /**
@@ -147,7 +155,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      *
      * @return
      */
-    public RecyclerAdapter getRecyclerAdapter() {
+    public SwipeRecyclerAdapter getRecyclerAdapter() {
         return this;
     }
 
@@ -157,11 +165,11 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param view
      */
     public void attachRecyclerView(RecyclerView view) {
-        if (scrollHelper == null) {
-            scrollHelper = new RecyclerScrollHelper();
-            scrollHelper.setOnScrollListener(this);
+        if (scrollListener == null) {
+            scrollListener = new SwipeRecyclerScrollListener();
+            scrollListener.setOnScrollListener(this);
         }
-        view.addOnScrollListener(scrollHelper);
+        view.addOnScrollListener(scrollListener);
         recyclerView = view;
     }
 
@@ -174,18 +182,17 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
         return recyclerView;
     }
 
-
     /**
      * 连接NestedScrollView (父容器有NestedScrollView，加载更多必须调用此方法)
      *
      * @param view
      */
     public void attachNestedScrollView(NestedScrollView view) {
-        if (scrollHelper == null) {
-            scrollHelper = new RecyclerScrollHelper();
-            scrollHelper.setOnScrollListener(this);
+        if (scrollListener == null) {
+            scrollListener = new SwipeRecyclerScrollListener();
+            scrollListener.setOnScrollListener(this);
         }
-        view.setOnScrollChangeListener(scrollHelper);
+        view.setOnScrollChangeListener(scrollListener);
         nestedScrollView = view;
     }
 
@@ -203,8 +210,8 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      *
      * @return
      */
-    public RecyclerScrollHelper getScrollHelper() {
-        return scrollHelper;
+    public SwipeRecyclerScrollListener getRecyclerScrollListener() {
+        return scrollListener;
     }
 
     /**
@@ -350,9 +357,8 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setShowHeader(boolean showHeader) {
         this.showHeader = showHeader;
-        setDataSource(dataSources);
+        setDataSource(ordinaries);
     }
-
 
     //============================Footer=========================
 
@@ -437,7 +443,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setShowFooter(boolean showFooter) {
         this.showFooter = showFooter;
-        setDataSource(dataSources);
+        setDataSource(ordinaries);
     }
 
     //============================More=========================
@@ -523,7 +529,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setShowLoading(boolean showLoading) {
         this.showLoading = showLoading;
-        setDataSource(dataSources);
+        setDataSource(ordinaries);
     }
 
     /**
@@ -557,7 +563,6 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public boolean isHasSwipe() {
         return getItemSwipeMenuLayoutResId() != 0;
     }
-
 
     /**
      * 是否显示侧滑菜单，默认显示
@@ -643,9 +648,8 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public int getItemViewType(int position) {
-        if (isExtra(position)) {
-            Extra item = getExtra(position);
-            return item.getViewType();
+        if (isExpansion(position)) {
+            return getExpansion(position).getViewType();
         }
         return super.getItemViewType(position);
     }
@@ -666,15 +670,15 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     protected View getItemView(ViewGroup parent, int viewType) {
         //头部
-        if (isHasHeader() && isShowHeader() && viewType == EXTRA_HEADER) {
+        if (isHasHeader() && isShowHeader() && viewType == SwipeExpansion.HEADER) {
             return headerView == null ? inflate(parent, getHeaderLayoutResId()) : attachToFrameLayout(headerView);
         }
         //脚部
-        if (isHasFooter() && isShowFooter() && viewType == EXTRA_FOOTER) {
+        if (isHasFooter() && isShowFooter() && viewType == SwipeExpansion.FOOTER) {
             return footerView == null ? inflate(parent, getFooterLayoutResId()) : attachToFrameLayout(footerView);
         }
         //加载更多
-        if (isHasLoading() && isShowLoading() && viewType == EXTRA_LOADING) {
+        if (isHasLoading() && isShowLoading() && viewType == SwipeExpansion.LOADING) {
             return loadingView == null ? inflate(parent, getLoadingLayoutResId()) : attachToFrameLayout(loadingView);
         }
         //侧滑
@@ -685,21 +689,17 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 根据LayoutResourceId获取View
-     *
      * @param parent   父级
      * @param resource 资源ID
-     * @return
+     * @return 根据LayoutResourceId获取View
      */
     protected View inflate(ViewGroup parent, @LayoutRes int resource) {
         return LayoutInflater.from(getContext()).inflate(resource, parent, false);
     }
 
     /**
-     * 附加到FrameLayout
-     *
-     * @param v
-     * @return
+     * @param v 控件
+     * @return 附加到FrameLayout
      */
     protected View attachToFrameLayout(View v) {
         FrameLayout layout = new FrameLayout(getContext());
@@ -719,11 +719,11 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
         ViewHolder holder = (ViewHolder) vh;
         addItemClick(holder, position);
         int viewType = getItemViewType(position);
-        if (viewType == EXTRA_HEADER) {
+        if (viewType == SwipeExpansion.HEADER) {
             onHeaderBindViewHolder(holder, headerArgs);
-        } else if (viewType == EXTRA_FOOTER) {
+        } else if (viewType == SwipeExpansion.FOOTER) {
             onFooterBindViewHolder(holder, footerArgs);
-        } else if (viewType == EXTRA_LOADING) {
+        } else if (viewType == SwipeExpansion.LOADING) {
             onLoadingBindViewHolder(holder, loadingArgs);
         } else {
             if (isSwipeEnable()) {
@@ -737,8 +737,8 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 添加item点击事件
      *
-     * @param holder
-     * @param position
+     * @param holder   控件容器
+     * @param position 位置
      */
     private void addItemClick(ViewHolder holder, int position) {
         holder.setOnItemClickLister(this);
@@ -747,9 +747,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public void onItemClick(View v, int position) {
-        if (isExtra(position)) {
-            if (onExtraItemClickListener != null) {
-                onExtraItemClickListener.onExtraItemClick(this, v, position);
+        if (isExpansion(position)) {
+            if (onExpansionItemClickListener != null) {
+                onExpansionItemClickListener.onExpansionItemClick(this, v, position);
             }
         } else {
             if (onItemClickListener != null) {
@@ -760,9 +760,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public void onItemFocusChange(View v, int position, boolean hasFocus) {
-        if (isExtra(position)) {
-            if (onExtraItemClickListener != null) {
-                onExtraItemClickListener.onExtraItemClick(this, v, position);
+        if (isExpansion(position)) {
+            if (onExpansionItemClickListener != null) {
+                onExpansionItemClickListener.onExpansionItemClick(this, v, position);
             }
         } else {
             if (onItemFocusChangeListener != null) {
@@ -802,8 +802,8 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 侧滑数据绑定
      *
-     * @param holder
-     * @param position
+     * @param holder   控件容器
+     * @param position 位置
      */
     protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
 
@@ -826,7 +826,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
 
     @Override
     public int getItemCount() {
-        int itemCount = complexSources == null ? 0 : complexSources.size();
+        int itemCount = items == null ? 0 : items.size();
         if (placeholder != null) {
             placeholder.setVisibility(itemCount == 0 ? View.VISIBLE : View.GONE);
         }
@@ -834,18 +834,14 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 获取上下文对象
-     *
-     * @return
+     * @return 获取上下文对象
      */
     public Context getContext() {
         return context;
     }
 
     /**
-     * 是否支持侧滑
-     *
-     * @return
+     * @return 是否支持侧滑
      */
     public boolean isSwipeEnable() {
         return isHasSwipe() && isShowSwipe();
@@ -854,7 +850,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     /**
      * 设置数据源
      *
-     * @param sources
+     * @param sources 数据源
      */
     public void setDataSource(List<T> sources) {
         setDataSource(sources, true);
@@ -866,28 +862,28 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param sources
      */
     public void setDataSource(List<T> sources, boolean notify) {
-        complexSources = new ArrayList<>();
-        dataSources = new ArrayList<>();
-        extraSources = new ArrayList<>();
+        items = new ArrayList<>();
+        ordinaries = new ArrayList<>();
+        expansions = new ArrayList<>();
         if (isHasHeader() && isShowHeader()) {
-            Extra extra = new Extra(EXTRA_HEADER);
-            extraSources.add(extra);
-            complexSources.add(new Complex(extra));
+            SwipeExpansion expansion = new SwipeExpansion(SwipeExpansion.HEADER);
+            expansions.add(expansion);
+            items.add(new SwipeItem(expansion));
         }
         int size = sources == null ? 0 : sources.size();
         for (int i = 0; i < size; i++) {
-            complexSources.add(new Complex(sources.get(i), isSwipeEnable()));
+            items.add(new SwipeItem(sources.get(i), isSwipeEnable()));
         }
-        dataSources = sources;
+        ordinaries = sources;
         if (isHasFooter() && isShowFooter()) {
-            Extra extra = new Extra(EXTRA_FOOTER);
-            extraSources.add(extra);
-            complexSources.add(new Complex(extra));
+            SwipeExpansion expansion = new SwipeExpansion(SwipeExpansion.FOOTER);
+            expansions.add(expansion);
+            items.add(new SwipeItem(expansion));
         }
         if (isHasLoading() && isShowLoading()) {
-            Extra extra = new Extra(EXTRA_LOADING);
-            extraSources.add(extra);
-            complexSources.add(new Complex(extra));
+            SwipeExpansion expansion = new SwipeExpansion(SwipeExpansion.LOADING);
+            expansions.add(expansion);
+            items.add(new SwipeItem(expansion));
         }
         if (notify) {
             notifyDataSetChanged();
@@ -895,41 +891,33 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 获取组合的复杂数据源（普通+[Header/Footer/Loading]）
-     *
-     * @return
+     * @return 组合的复杂数据源（普通+[Header/Footer/Loading]）
      */
-    public List<Complex<T>> getComplexSources() {
-        return complexSources;
+    public List<SwipeItem<T>> getItems() {
+        return items;
     }
 
     /**
-     * 获取额外数据源
-     *
-     * @return
+     * @return 扩展数据源
      */
-    public List<Extra> getExtraSources() {
-        return extraSources;
+    public List<SwipeExpansion> getExpansions() {
+        return expansions;
     }
 
     /**
-     * 获取普通源数据
-     *
-     * @return
+     * @return 普通源数据
      */
     public List<T> getDataSources() {
-        return dataSources;
+        return ordinaries;
     }
 
     /**
-     * 在复杂数据源中查找数据源
-     *
-     * @return
+     * @return 在复杂数据源中查找数据源
      */
     public List<T> findDataSources() {
         List<T> dataSources = new ArrayList<>();
-        for (int i = 0; i < complexSources.size(); i++) {
-            T item = complexSources.get(i).getItem();
+        for (int i = 0; i < items.size(); i++) {
+            T item = items.get(i).getOrdinary();
             if (item != null) {
                 dataSources.add(item);
             }
@@ -938,43 +926,43 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 是否是普通Item
-     *
      * @param position
-     * @return
+     * @return 是否是普通Item
      */
     public boolean isItem(int position) {
-        return complexSources.get(position).getItem() != null;
+        return items.get(position).getOrdinary() != null;
     }
 
     /**
-     * 获取Item数据
-     *
-     * @param position
-     * @return
+     * @param position 位置
+     * @return Item数据
      */
     public T getItem(int position) {
-        return complexSources.get(position).getItem();
+        return items.get(position).getOrdinary();
     }
 
     /**
-     * 是否是额外Item(Header/Footer/More)
-     *
      * @param position
-     * @return
+     * @return 是否是扩展Item(Header / Footer / More)
      */
-    public boolean isExtra(int position) {
-        return complexSources.get(position).getExtra() != null;
+    public boolean isExpansion(int position) {
+        return items.get(position).getExpansion() != null;
     }
 
     /**
-     * 获取额外Item
-     *
-     * @param position
-     * @return
+     * @param position 位置
+     * @return 扩展Item
      */
-    public Extra getExtra(int position) {
-        return complexSources.get(position).getExtra();
+    public SwipeExpansion getExpansion(int position) {
+        return items.get(position).getExpansion();
+    }
+
+    /**
+     * @param position 位置
+     * @return 扩展视图类型
+     */
+    public int getExpansionViewType(int position) {
+        return getExpansion(position).getViewType();
     }
 
     /**
@@ -983,12 +971,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param item
      */
     public void addItem(T item) {
-        dataSources.add(item);
-        setDataSource(dataSources, false);
-        int position = dataSources.size();
-        if (isHasHeader() && isShowHeader()) {
-            position = dataSources.size() + 1;
-        }
+        ordinaries.add(item);
+        setDataSource(ordinaries, false);
+        int position = ordinaries.size();
         notifyItemInserted(position);
     }
 
@@ -999,13 +984,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param item     数据item
      */
     public void addItem(int position, T item) {
-        complexSources.add(position, new Complex(item, isSwipeEnable()));
+        items.add(position, new SwipeItem(item, isSwipeEnable()));
         setDataSource(findDataSources(), false);
-        int insertPosition = dataSources.size();
-        if (isHasHeader() && isShowHeader()) {
-            insertPosition = dataSources.size() + 1;
-        }
-        notifyItemInserted(insertPosition);
+        notifyItemInserted(position);
     }
 
     /**
@@ -1014,12 +995,9 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param item
      */
     public void addFirst(T item) {
-        dataSources.add(0, item);
-        setDataSource(dataSources, false);
-        int position = 0;
-        if (isHasHeader() && isShowHeader()) {
-            position = 1;
-        }
+        ordinaries.add(0, item);
+        setDataSource(ordinaries, false);
+        int position = isHasHeader() && isShowHeader() ? 1 : 0;
         notifyItemInserted(position);
     }
 
@@ -1056,14 +1034,16 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public void addItems(List<T> sources) {
         int count = sources == null ? 0 : sources.size();
         for (int i = 0; i < count; i++) {
-            dataSources.add((T) new Complex(sources.get(i), isSwipeEnable()));
+            ordinaries.add(sources.get(i));
         }
-        setDataSource(dataSources, false);
-        int positionStart = getItemCount() - 1;
         if (count > 0) {
-            positionStart = getItemCount() - 1;
+            int positionStart = getItemCount() - 1;
+            setDataSource(ordinaries, false);
+            if (isHasFooter() && isShowFooter()) {
+                positionStart -= 1;
+            }
+            notifyItemRangeInserted(positionStart, count);
         }
-        notifyItemRangeInserted(positionStart + 1, count);
     }
 
     /**
@@ -1072,7 +1052,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      * @param position 位置
      */
     public void removeItem(int position) {
-        complexSources.remove(position);
+        items.remove(position);
         setDataSource(findDataSources(), false);
         notifyItemRemoved(position);
     }
@@ -1085,7 +1065,7 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void removeItems(int positionStart, int itemCount) {
         if (positionStart < getItemCount() && (itemCount - 1 + positionStart) < getItemCount()) {
-            complexSources.removeAll(complexSources.subList(positionStart, positionStart + itemCount));
+            items.removeAll(items.subList(positionStart, positionStart + itemCount));
             setDataSource(findDataSources(), false);
             notifyItemRangeRemoved(positionStart, itemCount);
         }
@@ -1100,11 +1080,11 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     public void swapItem(int fromPosition, int toPosition) {
         if (fromPosition < toPosition) {
             for (int i = fromPosition; i < toPosition; i++) {
-                Collections.swap(complexSources, i, i + 1);
+                Collections.swap(items, i, i + 1);
             }
         } else {
             for (int i = fromPosition; i > toPosition; i--) {
-                Collections.swap(complexSources, i, i - 1);
+                Collections.swap(items, i, i - 1);
             }
         }
         notifyItemMoved(fromPosition, toPosition);
@@ -1134,6 +1114,22 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     private OnItemClickListener onItemClickListener;
 
     /**
+     * Item点击事件回调
+     */
+    public interface OnItemClickListener<T> {
+
+        /**
+         * Item点击
+         *
+         * @param adapter  适配器
+         * @param v        数据
+         * @param position 位置
+         */
+        void onItemClick(SwipeRecyclerAdapter<T> adapter, View v, int position);
+
+    }
+
+    /**
      * 获取Item点击事件
      *
      * @return
@@ -1152,25 +1148,26 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * Item点击事件回调
-     */
-    public interface OnItemClickListener {
-
-        /**
-         * Item点击
-         *
-         * @param adapter  适配器
-         * @param v        数据
-         * @param position 位置
-         */
-        void onItemClick(RecyclerAdapter adapter, View v, int position);
-
-    }
-
-    /**
      * 设置焦点改变点击事件
      */
     public OnItemFocusChangeListener onItemFocusChangeListener;
+
+    /**
+     * 焦点改变事件
+     */
+    public interface OnItemFocusChangeListener<T> {
+
+        /**
+         * 焦点修改
+         *
+         * @param adapter  适配器
+         * @param v        控件
+         * @param position 位置
+         * @param hasFocus 是否获取焦点
+         */
+        void onItemFocusChange(SwipeRecyclerAdapter<T> adapter, View v, int position, boolean hasFocus);
+
+    }
 
     /**
      * 获取焦点改变事件
@@ -1191,47 +1188,11 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
     }
 
     /**
-     * 焦点改变事件
-     */
-    public interface OnItemFocusChangeListener {
-
-        /**
-         * 焦点修改
-         *
-         * @param adapter  适配器
-         * @param v        控件
-         * @param position 位置
-         * @param hasFocus 是否获取焦点
-         */
-        void onItemFocusChange(RecyclerAdapter adapter, View v, int position, boolean hasFocus);
-
-    }
-
-    /**
      * 附加Item点击
      */
-    private OnExtraItemClickListener onExtraItemClickListener;
+    private OnExpansionItemClickListener onExpansionItemClickListener;
 
-    /**
-     * 获取附加Item点击
-     *
-     * @return
-     */
-    public OnExtraItemClickListener getOnExtraItemClickListener() {
-        return onExtraItemClickListener;
-    }
-
-    /**
-     * 设置附加Item点击<br/>
-     * Header、Footer、Loading<br/>
-     *
-     * @param onExtraItemClickListener
-     */
-    public void setOnExtraItemClickListener(OnExtraItemClickListener onExtraItemClickListener) {
-        this.onExtraItemClickListener = onExtraItemClickListener;
-    }
-
-    public interface OnExtraItemClickListener {
+    public interface OnExpansionItemClickListener<T> {
 
         /**
          * 附加Item点击
@@ -1240,34 +1201,38 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
          * @param v        数据
          * @param position 位置
          */
-        void onExtraItemClick(RecyclerAdapter adapter, View v, int position);
-
+        void onExpansionItemClick(SwipeRecyclerAdapter<T> adapter, View v, int position);
 
     }
 
     /**
-     * 附加焦点改变事件
-     */
-    private OnExtraItemFocusChangeListener onExtraItemFocusChangeListener;
-
-    /**
-     * 获取附加焦点改变事件
+     * 获取附加Item点击
      *
      * @return
      */
-    public void setOnExtraItemFocusChangeListener(OnExtraItemFocusChangeListener onExtraItemFocusChangeListener) {
-        this.onExtraItemFocusChangeListener = onExtraItemFocusChangeListener;
+    public OnExpansionItemClickListener getOnExpansionItemClickListener() {
+        return onExpansionItemClickListener;
     }
+
     /**
-     * 设置附加焦点改变事件
+     * 设置附加Item点击<br/>
+     * Header、Footer、Loading<br/>
      *
-     * @param onAttachFocusChangeListener
+     * @param onExpansionItemClickListener
      */
+    public void setOnExpansionItemClickListener(OnExpansionItemClickListener onExpansionItemClickListener) {
+        this.onExpansionItemClickListener = onExpansionItemClickListener;
+    }
 
     /**
      * 附加焦点改变事件
      */
-    public interface OnExtraItemFocusChangeListener {
+    private OnExpansionItemFocusChangeListener onExpansionItemFocusChangeListener;
+
+    /**
+     * 附加焦点改变事件
+     */
+    public interface OnExpansionItemFocusChangeListener<T> {
 
         /**
          * 附加焦点改变
@@ -1277,14 +1242,40 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
          * @param position 位置
          * @param hasFocus 是否获取焦点
          */
-        void onExtraItemFocusChange(RecyclerAdapter adapter, View v, int position, boolean hasFocus);
+        void onExpansionItemFocusChange(SwipeRecyclerAdapter<T> adapter, View v, int position, boolean hasFocus);
 
     }
+
+    /**
+     * 获取附加焦点改变事件
+     *
+     * @return
+     */
+    public void setOnExpansionItemFocusChangeListener(OnExpansionItemFocusChangeListener onExpansionItemFocusChangeListener) {
+        this.onExpansionItemFocusChangeListener = onExpansionItemFocusChangeListener;
+    }
+    /**
+     * 设置附加焦点改变事件
+     *
+     * @param onAttachFocusChangeListener
+     */
 
     /**
      * 加载更多监听
      */
     private OnLoadingListener onLoadingListener;
+
+    /**
+     * 加载更多监听
+     */
+    public interface OnLoadingListener {
+
+        /**
+         * 加载更多
+         */
+        void onLoading();
+
+    }
 
     /**
      * 获取加载更多监听
@@ -1302,86 +1293,6 @@ public abstract class RecyclerAdapter<T> extends RecyclerView.Adapter implements
      */
     public void setOnLoadListener(OnLoadingListener onLoadingListener) {
         this.onLoadingListener = onLoadingListener;
-    }
-
-    public interface OnLoadingListener {
-
-        /**
-         * 加载更多
-         */
-        void onLoading();
-
-    }
-
-    /**
-     * 混合Item
-     *
-     * @param <T>
-     */
-    public static class Complex<T> {
-
-        /**
-         * 是否支持侧滑
-         */
-        private boolean swipe;
-        /**
-         * 普通item
-         */
-        private T item;
-        /**
-         * 额外Item
-         */
-        private Extra extra;
-
-        public Complex(Extra extra) {
-            this.extra = extra;
-        }
-
-        public Complex(T item, boolean swipe) {
-            this.item = item;
-            this.swipe = swipe;
-        }
-
-        public boolean isSwipe() {
-            return swipe;
-        }
-
-        public void setSwipe(boolean swipe) {
-            this.swipe = swipe;
-        }
-
-        public T getItem() {
-            return item;
-        }
-
-        public void setItem(T item) {
-            this.item = item;
-        }
-
-        public Extra getExtra() {
-            return extra;
-        }
-
-        public void setExtra(Extra extra) {
-            this.extra = extra;
-        }
-
-    }
-
-    public static class Extra {
-
-        /**
-         * 视图类型 {@link #EXTRA_HEADER} or {@link #EXTRA_FOOTER} or {@link #EXTRA_LOADING}
-         */
-        private int viewType;
-
-        public Extra(int viewType) {
-            this.viewType = viewType;
-        }
-
-        public int getViewType() {
-            return viewType;
-        }
     }
 
 }

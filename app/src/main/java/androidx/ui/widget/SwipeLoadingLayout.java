@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -14,6 +14,8 @@ import android.widget.TextView;
 import androidx.annotation.ColorInt;
 import androidx.annotation.Nullable;
 import androidx.core.widget.NestedScrollView;
+
+import com.androidx.widget.R;
 
 /**
  * 加载更多

@@ -1,4 +1,4 @@
-package com.androidx.widget;
+package androidx.ui.widget;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -19,6 +19,8 @@ import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.Nullable;
+
+import com.androidx.widget.R;
 
 import java.util.HashMap;
 import java.util.Map;
