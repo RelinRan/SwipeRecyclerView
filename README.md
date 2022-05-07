@@ -1,7 +1,7 @@
 # SwipeRecyclerView
 支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)
-## SwipeRecyclerAdapter
-使用方法，请查看[GitHub-SwipeRecyclerAdapter](https://github.com/RelinRan/SwipeRecyclerAdapter)
+## AAR
+[siwpe_2022.5.7.1.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/master/siwpe_2022.5.7.1.aar)
 ## Maven
 1.build.grade
 ```
@@ -15,7 +15,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-        implementation 'com.github.RelinRan:SwipeRecyclerView:2022.2.20.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.5.7.1'
 }
 ```
 
@@ -63,7 +63,7 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 ```
 ### Activity|Fragment
 ```
-rv_content = findViewById(R.id.rv_content);
+SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
 //设置侧滑菜单可用，此方法需要SwipeItemAdapter.setShowSwipe(true);
 rv_content.setSwipeEnable(false);
 //适配器

@@ -8,15 +8,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-
 import androidx.annotation.ColorRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.androidx.widget.R;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -777,7 +774,9 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * @param holder   控件容器
      * @param position 位置
      */
-    protected abstract void onItemBindViewHolder(ViewHolder holder, int position);
+    protected void onItemBindViewHolder(ViewHolder holder, int position) {
+
+    }
 
     /**
      * 头部绑定数据
