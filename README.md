@@ -1,7 +1,7 @@
 # SwipeRecyclerView
 支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)
 ## AAR
-[siwpe_2022.5.7.1.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/master/siwpe_2022.5.7.1.aar)
+[swipe_2022.5.7.1.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/main/swipe_2022.5.7.1.aar)
 ## Maven
 1.build.grade
 ```
