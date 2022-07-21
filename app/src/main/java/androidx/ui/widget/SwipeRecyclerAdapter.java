@@ -1036,12 +1036,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
             ordinaries.add(sources.get(i));
         }
         if (count > 0) {
-            int positionStart = getItemCount() - 1;
-            setDataSource(ordinaries, false);
-            if (isHasFooter() && isShowFooter()) {
-                positionStart -= 1;
-            }
-            notifyItemRangeInserted(positionStart, count);
+            setDataSource(ordinaries, true);
         }
     }
 
