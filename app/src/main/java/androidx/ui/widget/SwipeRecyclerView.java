@@ -1,12 +1,11 @@
 package androidx.ui.widget;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
-import android.view.VelocityTracker;
 import android.view.View;
-import android.view.ViewConfiguration;
-import android.widget.OverScroller;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,10 +15,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 public class SwipeRecyclerView extends RecyclerView {
 
-    //滑动追踪器
-    private OverScroller scroller;
-    //速度追踪器
-    private VelocityTracker velocityTracker;
+    private String TAG = SwipeRecyclerView.class.getSimpleName();
+    public static boolean DEBUG = false;
     //RecyclerView childView
     private View childView;
     //RecyclerView itemView容器
@@ -39,12 +36,14 @@ public class SwipeRecyclerView extends RecyclerView {
     private boolean longPressDragEnabled;
     //触摸滑动监听
     private OnItemTouchSwipedListener onItemTouchSwipedListener;
-    //移动极限
-    private int scaledTouchSlop;
     //触摸助手
     private ItemTouchHelper touchHelper;
     //侧滑助手
     private SwipeItemTouchHelperCallback callback;
+    //侧滑移动百分比
+    private float sideRatio = 0.5F;
+    //侧滑动画持续事件
+    private int sideDuration = 300;
 
     public SwipeRecyclerView(@NonNull Context context) {
         super(context);
@@ -66,9 +65,6 @@ public class SwipeRecyclerView extends RecyclerView {
         callback = new SwipeItemTouchHelperCallback();
         touchHelper = new ItemTouchHelper(callback);
         touchHelper.attachToRecyclerView(this);
-        scroller = new OverScroller(context);
-        velocityTracker = VelocityTracker.obtain();
-        scaledTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
     }
 
     /**
@@ -310,10 +306,6 @@ public class SwipeRecyclerView extends RecyclerView {
                 }
             }
         }
-        if (!scroller.isFinished()) {
-            scroller.abortAnimation();
-        }
-        scroller = new OverScroller(getContext());
     }
 
     /**
@@ -325,21 +317,18 @@ public class SwipeRecyclerView extends RecyclerView {
      */
     private void moveSwipeItemMenu(MotionEvent e, float dx, float dy) {
         if (isSwipeEnable() && e.getPointerCount() < 2) {
-            velocityTracker.computeCurrentVelocity((int) (menuWidth * 0.1F), menuWidth);
             //水平滑动
-            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > scaledTouchSlop) {
+            if (Math.abs(dx) > Math.abs(dy)) {
                 if (getParent() != null) {
                     getParent().requestDisallowInterceptTouchEvent(true);
                 }
-                if (velocityTracker.getXVelocity() < 10) {
-                    smoothSwipeLayoutBy(dx * 0.5f);
-                } else {
-                    scroller.startScroll(scroller.getFinalX(), 0, (int) dx, 0, 250);
-                    invalidate();
+                if (DEBUG) {
+                    Log.i(TAG, "->" + "dx = " + dx + ",dy = " + dy);
                 }
+                smoothSwipeLayoutBy(e, false, dx);
             }
             //垂直滑动
-            if (Math.abs(dx) < Math.abs(dy) && Math.abs(dy) > scaledTouchSlop) {
+            if (Math.abs(dx) < Math.abs(dy)) {
                 closeSwipe();
             }
         }
@@ -348,6 +337,10 @@ public class SwipeRecyclerView extends RecyclerView {
     private float dx, dy;
     private long dt = 0;
     private boolean isMove;
+    private float distanceX;
+    private float distanceY;
+    private float adx;
+    private float ady;
 
     /**
      * 触摸事件处理
@@ -355,7 +348,6 @@ public class SwipeRecyclerView extends RecyclerView {
      * @param e
      */
     protected boolean touchSwipeEvent(MotionEvent e) {
-        velocityTracker.addMovement(e);
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 findSwipeItemMenu(e);
@@ -365,20 +357,28 @@ public class SwipeRecyclerView extends RecyclerView {
                 dt = System.currentTimeMillis();
                 break;
             case MotionEvent.ACTION_MOVE:
-                float distanceX = e.getX() - dx;
-                float distanceY = e.getY() - dy;
-                float adx = Math.abs(distanceX);
-                float ady = Math.abs(distanceY);
-                if (adx > ady && ady > 10) {
-                    isMove = true;
-                }
+                distanceX = e.getX() - dx;
+                distanceY = e.getY() - dy;
+                adx = Math.abs(distanceX);
+                ady = Math.abs(distanceY);
+                isMove = adx > ady;
                 if (isMove) {
                     moveSwipeItemMenu(e, distanceX, distanceY);
                 }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (System.currentTimeMillis() - dt < 50 && isMove) {
+                float itemX = Math.abs(itemLayout.getTranslationX());
+                if (DEBUG) {
+                    Log.i(TAG, "->ACTION_UP itemX = " + itemX + ", menuWidth = " + menuWidth + ",distanceX = " + distanceX);
+                }
+                if (itemX < menuWidth / 2) {
+                    closeSwipeEnforce();
+                }
+                if (itemX >= menuWidth / 2) {
+                    openSwipeEnforce();
+                }
+                if (System.currentTimeMillis() - dt < 30 && isMove) {
                     isMove = false;
                 }
                 break;
@@ -405,18 +405,14 @@ public class SwipeRecyclerView extends RecyclerView {
     }
 
     /**
-     * 滑动菜单是否打开
-     *
-     * @return
+     * @return 滑动菜单是否打开
      */
     public boolean isSwipeOpen() {
         return swipeOpen;
     }
 
     /**
-     * 滑动菜单是否关闭
-     *
-     * @return
+     * @return 滑动菜单是否关闭
      */
     public boolean isSwipeClose() {
         return !swipeOpen;
@@ -437,38 +433,48 @@ public class SwipeRecyclerView extends RecyclerView {
     /**
      * 滑动菜单位移
      *
-     * @param mx 横向移动距离
+     * @param animator 是否动画
+     * @param mx       横向移动距离
      */
-    public void smoothSwipeLayoutBy(float mx) {
+    public void smoothSwipeLayoutBy(MotionEvent e, boolean animator, float mx) {
+        mx *= sideRatio;
         if (itemLayout != null) {
             float itemLayoutX = itemLayout.getTranslationX() + mx;
             if (itemLayoutX > -menuWidth && itemLayoutX < 0) {
-                setSwipeItemLayoutTranslationX(itemLayoutX);
+                setSwipeItemLayoutTranslationX(animator, itemLayoutX);
                 setSwipeOpen(true);
             }
             if (itemLayoutX <= -menuWidth) {
-                setSwipeItemLayoutTranslationX(-menuWidth);
+                setSwipeItemLayoutTranslationX(animator, -menuWidth);
                 setSwipeOpen(true);
+                dx = e.getX();
+                dy = e.getY();
             }
             if (itemLayoutX >= 0) {
-                setSwipeItemLayoutTranslationX(0);
+                setSwipeItemLayoutTranslationX(animator, 0);
                 setSwipeOpen(false);
+                dx = e.getX();
+                dy = e.getY();
             }
         }
         //菜单布局
         if (menuLayout != null) {
             float menuLayoutX = menuLayout.getTranslationX() + mx;
             if (menuLayoutX > 0 && menuLayoutX < menuWidth) {
-                setSwipeMenuLayoutTranslationX(menuLayoutX);
+                setSwipeMenuLayoutTranslationX(animator, menuLayoutX);
                 setSwipeOpen(true);
             }
             if (menuLayoutX <= 0) {
-                setSwipeMenuLayoutTranslationX(0);
+                setSwipeMenuLayoutTranslationX(animator, 0);
                 setSwipeOpen(true);
+                dx = e.getX();
+                dy = e.getY();
             }
             if (menuLayoutX >= menuWidth) {
-                setSwipeMenuLayoutTranslationX(menuWidth);
+                setSwipeMenuLayoutTranslationX(animator, menuWidth);
                 setSwipeOpen(false);
+                dx = e.getX();
+                dy = e.getY();
             }
         }
     }
@@ -476,25 +482,50 @@ public class SwipeRecyclerView extends RecyclerView {
     /**
      * 设置滑动RecyclerView Item布局x位移
      *
-     * @param translationX
+     * @param animator     是否动画
+     * @param translationX x轴移动距离
      */
-    public void setSwipeItemLayoutTranslationX(float translationX) {
+    public void setSwipeItemLayoutTranslationX(boolean animator, float translationX) {
         if (itemLayout == null) {
             return;
         }
-        itemLayout.setTranslationX(translationX);
+        if (animator) {
+            setSwipeItemLayoutAnimatorValue(itemLayout.getTranslationX(), translationX);
+        } else {
+            itemLayout.setTranslationX(translationX);
+        }
     }
 
     /**
      * 设置滑动RecyclerView Menu布局x位移
      *
-     * @param translationX
+     * @param animator     是否动画
+     * @param translationX x轴移动距离
      */
-    public void setSwipeMenuLayoutTranslationX(float translationX) {
+    public void setSwipeMenuLayoutTranslationX(boolean animator, float translationX) {
         if (menuLayout == null) {
             return;
         }
-        menuLayout.setTranslationX(translationX);
+        if (animator) {
+            setSwipeMenuLayoutAnimatorValue(menuLayout.getTranslationX(), translationX);
+        } else {
+            menuLayout.setTranslationX(translationX);
+        }
+    }
+
+    /**
+     * 打开侧滑菜单
+     */
+    public void openSwipe() {
+        if (isSwipeClose()) {
+            if (itemLayout != null) {
+                float itemX = itemLayout.getTranslationX();
+                float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
+                setSwipeItemLayoutAnimatorValue(itemX, -menuWidth);
+                setSwipeMenuLayoutAnimatorValue(menuX, 0);
+            }
+            setSwipeOpen(true);
+        }
     }
 
     /**
@@ -503,43 +534,105 @@ public class SwipeRecyclerView extends RecyclerView {
     public void closeSwipe() {
         if (isSwipeOpen()) {
             if (itemLayout != null) {
-                setSwipeItemLayoutTranslationX(0);
-                setSwipeMenuLayoutTranslationX(menuWidth);
+                float itemX = itemLayout.getTranslationX();
+                float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
+                setSwipeItemLayoutAnimatorValue(itemX, 0);
+                setSwipeMenuLayoutAnimatorValue(menuX, menuWidth);
             }
-            setSwipeOpen(false);
         }
     }
 
     /**
-     * 打开侧滑菜单
+     * 强制关闭侧滑
      */
-    public void openSwipeMenu() {
-        if (isSwipeClose()) {
-            if (itemLayout != null) {
-                setSwipeItemLayoutTranslationX(-menuWidth);
-                setSwipeMenuLayoutTranslationX(0);
-            }
-            setSwipeOpen(true);
+    public void closeSwipeEnforce() {
+        if (itemLayout != null) {
+            float itemX = itemLayout.getTranslationX();
+            float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
+            setSwipeItemLayoutAnimatorValue(itemX, 0);
+            setSwipeMenuLayoutAnimatorValue(menuX, menuWidth);
         }
     }
 
-    @Override
-    public void computeScroll() {
-        super.computeScroll();
-        if (scroller.computeScrollOffset()) {
-            if (itemLayout == null) {
-                return;
-            }
-            int currX = scroller.getCurrX();
-            //左滑 - Open
-            if (currX < 0 && Math.abs(currX) >= menuWidth) {
-                openSwipeMenu();
-            }
-            //右滑 - Close
-            if (currX > 0) {
-                closeSwipe();
-            }
+    /**
+     * 强制打开侧滑菜单
+     */
+    public void openSwipeEnforce() {
+        if (itemLayout != null) {
+            float itemX = itemLayout.getTranslationX();
+            float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
+            setSwipeItemLayoutAnimatorValue(itemX, -menuWidth);
+            setSwipeMenuLayoutAnimatorValue(menuX, 0);
         }
+        setSwipeOpen(true);
+    }
+
+    /**
+     * 设置item布局动画值
+     *
+     * @param start 开始
+     * @param end   结束
+     */
+    private void setSwipeItemLayoutAnimatorValue(float start, float end) {
+        ValueAnimator animator = ValueAnimator.ofFloat(start, end);
+        animator.addUpdateListener(animation -> {
+            float value = (Float) animator.getAnimatedValue();
+            setSwipeItemLayoutTranslationX(false, value);
+            if (value == 0) {
+                setSwipeOpen(false);
+            }
+        });
+        animator.setDuration(sideDuration);
+        animator.start();
+    }
+
+    /**
+     * 设置菜单布局动画值
+     *
+     * @param start 开始
+     * @param end   结束
+     */
+    private void setSwipeMenuLayoutAnimatorValue(float start, float end) {
+        ValueAnimator animator = ValueAnimator.ofFloat(start, end);
+        animator.addUpdateListener(animation -> {
+            float value = (Float) animator.getAnimatedValue();
+            setSwipeMenuLayoutTranslationX(false, value);
+            if (value == menuWidth) {
+                setSwipeOpen(false);
+            }
+        });
+        animator.setDuration(sideDuration);
+        animator.start();
+    }
+
+    /**
+     * @return 侧滑百分比（移动距离判断）
+     */
+    public float getSideRatio() {
+        return sideRatio;
+    }
+
+    /**
+     * 设置侧滑百分比（移动距离判断）
+     * @param sideRatio
+     */
+    public void setSideRatio(float sideRatio) {
+        this.sideRatio = sideRatio;
+    }
+
+    /**
+     * @return 侧滑持续动画时长（移动距离判断）
+     */
+    public int getSideDuration() {
+        return sideDuration;
+    }
+
+    /**
+     * 设置侧滑持续动画时长（移动距离判断）
+     * @param sideDuration
+     */
+    public void setSideDuration(int sideDuration) {
+        this.sideDuration = sideDuration;
     }
 
 }

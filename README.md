@@ -3,7 +3,7 @@
 # 资源
 |名字|资源|
 |-|-|
-|AAR|[swipe_2022.7.21.1.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/master/swipe_2022.7.21.1.aar)|
+|AAR|[swipe.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/master/swipe_2022.7.25.1.aar)|
 |GitHub |[SwipeRecyclerView](https://github.com/RelinRan/SwipeRecyclerView)|
 |Gitee|[SwipeRecyclerView](https://gitee.com/relin/SwipeRecyclerView)|
 ## Maven
@@ -19,7 +19,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.7.21.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.7.25.1'
 }
 ```
 
