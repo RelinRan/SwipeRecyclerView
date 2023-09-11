@@ -3,7 +3,7 @@
 # 资源
 |名字|资源|
 |-|-|
-|AAR|[swipe.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/master/swipe_2022.7.25.1.aar)|
+|AAR|[swipe_recycler_view.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/main/aar)|
 |GitHub |[SwipeRecyclerView](https://github.com/RelinRan/SwipeRecyclerView)|
 |Gitee|[SwipeRecyclerView](https://gitee.com/relin/SwipeRecyclerView)|
 ## Maven
@@ -19,7 +19,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.7.25.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.11.1'
 }
 ```
 
@@ -65,28 +65,74 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
 }
 ```
+item布局 item_text
+```
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tv_item_text"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:background="#6835C3"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="10dp"
+    android:text="item"
+    android:textColor="@android:color/white" />
+```
+菜单布局 item_swipe_menu 
+```
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/tv_delete"
+        android:layout_width="80dp"
+        android:layout_height="match_parent"
+        android:background="#8743AE"
+        android:gravity="center"
+        android:text="Delete"
+        android:textColor="@color/white" />
+
+    <TextView
+        android:id="@+id/tv_edit"
+        android:layout_width="80dp"
+        android:layout_height="match_parent"
+        android:background="#5C8CC7"
+        android:gravity="center"
+        android:text="Edit"
+        android:textColor="@color/white" />
+
+</LinearLayout>
+```
 ### Activity|Fragment
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
+rv_content.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
 //设置侧滑菜单可用，此方法需要SwipeItemAdapter.setShowSwipe(true);
-rv_content.setSwipeEnable(false);
+rv_content.setSwipeEnable(true);
 //适配器
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 //设置侧滑菜单可用
 adapter.setShowSwipe(true);
 //设置此方法之前，在SwipeItemAdapter中holder.addItemClick(R.id.xxx);
 adapter.setOnItemClickListener((adapter, v, position) -> {
-     switch (v.getId()){
-         case R.id.tv_edit:
-
-         break;
-         case R.id.tv_delete:
-            adapter.removeItem(position);
-            //注意：删除item,一定需要调用此方法。
-            rv_content.closeSwipe();
-            break;
-         }
+     if (v.getId()==R.id.tv_delete){
+         apt.removeItem(position);
+         //注意：删除item,一定需要调用此方法。
+         rv_content.closeSwipe();
+     }
+     if (v.getId()==R.id.tv_edit){
+         rv_content.closeSwipe();
+     }
 });
+//设置数据源
+List<String> list = new ArrayList<>();
+for (int i = 0; i < 50; i++) {
+    list.add("item "+(i+1));
+}
+adapter.setDataSource(list);
 ```
 ## 长按拖拽
 ### RecyclerView

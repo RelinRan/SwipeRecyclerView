@@ -246,13 +246,20 @@ public class SwipeRecyclerView extends RecyclerView {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent e) {
-        return touchSwipeEvent(e);
+        if (touchSwipeEvent(e)){
+            return true;
+        }
+        return super.onInterceptTouchEvent(e);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        return touchSwipeEvent(e);
+        if (touchSwipeEvent(e)){
+            return true;
+        }
+        return super.onTouchEvent(e);
     }
+
 
     /**
      * Item触摸监听
