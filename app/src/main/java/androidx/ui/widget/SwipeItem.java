@@ -1,5 +1,6 @@
 package androidx.ui.widget;
 
+
 /**
  * 混合Item
  *
@@ -11,6 +12,10 @@ public class SwipeItem<T> {
      * 是否支持侧滑
      */
     private boolean swipe;
+    /**
+     * 是否打开侧滑
+     */
+    private boolean open;
     /**
      * 普通item
      */
@@ -35,6 +40,14 @@ public class SwipeItem<T> {
 
     public void setSwipe(boolean swipe) {
         this.swipe = swipe;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public void setOpen(boolean open) {
+        this.open = open;
     }
 
     public T getOrdinary() {

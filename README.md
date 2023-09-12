@@ -19,7 +19,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.11.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.13.1'
 }
 ```
 
@@ -110,21 +110,19 @@ item布局 item_text
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
 rv_content.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
-//设置侧滑菜单可用，此方法需要SwipeItemAdapter.setShowSwipe(true);
-rv_content.setSwipeEnable(true);
 //适配器
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 //设置侧滑菜单可用
 adapter.setShowSwipe(true);
 //设置此方法之前，在SwipeItemAdapter中holder.addItemClick(R.id.xxx);
-adapter.setOnItemClickListener((adapter, v, position) -> {
+adapter.setOnItemClickListener((apt, v, position) -> {
      if (v.getId()==R.id.tv_delete){
          apt.removeItem(position);
          //注意：删除item,一定需要调用此方法。
-         rv_content.closeSwipe();
+         apt.closeSwipe(position);
      }
      if (v.getId()==R.id.tv_edit){
-         rv_content.closeSwipe();
+        apt.closeSwipe(position);
      }
 });
 //设置数据源
