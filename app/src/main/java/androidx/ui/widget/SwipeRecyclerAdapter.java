@@ -136,11 +136,19 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     /**
      * 侧滑移动百分比
      */
-    private float sideRatio = 0.5F;
+    private float swipeRatio = 1.0F;
     /**
      * 侧滑动画持续事件
      */
-    private int sideDuration = 300;
+    private int swipeDuration = 300;
+    /**
+     * item动画
+     */
+    private SwipeItemAnimator itemAnimator;
+    /**
+     * 菜单动画
+     */
+    private SwipeItemAnimator menuAnimator;
 
     public SwipeRecyclerAdapter(Context context) {
         this.context = context;
@@ -825,8 +833,8 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
         if (getItems().get(position).isSwipe()) {
             SwipeItemTouchEvent touchEvent = new SwipeItemTouchEvent(this, holder, position);
-            touchEvent.setSideDuration(sideDuration);
-            touchEvent.setSideRatio(sideRatio);
+            touchEvent.setSwipeDuration(swipeDuration);
+            touchEvent.setSwipeRatio(swipeRatio);
             touchEvent.setSwipeThreshold(swipeThreshold);
             holder.itemView.setOnTouchListener(touchEvent);
         }
@@ -837,9 +845,50 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @param position 位置
      * @param open     是否打开
+     * @param animator 是否使用动画
      */
-    public void setItemSwipeOpen(int position, boolean open) {
+    public void setSwipeMenu(int position, boolean open, boolean animator) {
         getItems().get(position).setOpen(open);
+        if (recyclerView == null) {
+            return;
+        }
+        RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+        if (holder == null) {
+            return;
+        }
+        View itemLayout = findSwipeItemLayout(holder.itemView);
+        View menuLayout = findSwipeMenuLayout(holder.itemView);
+        View menuView = findSwipeMenuView(holder.itemView);
+        int menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
+        SwipeItem item = getItems().get(position);
+        boolean isOpen = item.isOpen();
+        if (animator) {
+            if (itemAnimator == null) {
+                itemAnimator = new SwipeItemAnimator();
+                itemAnimator.setDuration(swipeDuration);
+            }
+            if (menuAnimator == null) {
+                menuAnimator = new SwipeItemAnimator();
+                menuAnimator.setDuration(swipeDuration);
+            }
+        }
+        if (isOpen) {
+            if (animator) {
+                itemAnimator.start(itemLayout, -menuWidth);
+                menuAnimator.start(menuLayout, 0);
+            } else {
+                itemLayout.setTranslationX(-menuWidth);
+                menuLayout.setTranslationX(0);
+            }
+        } else {
+            if (animator) {
+                itemAnimator.start(itemLayout, 0);
+                menuAnimator.start(menuLayout, menuWidth);
+            } else {
+                itemLayout.setTranslationX(0);
+                menuLayout.setTranslationX(menuWidth);
+            }
+        }
     }
 
     /**
@@ -848,48 +897,47 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * @param position
      * @return
      */
-    public boolean isItemSwipeOpen(int position) {
+    public boolean isSwipeOpen(int position) {
         return getItems().get(position).isSwipe();
     }
 
     /**
-     * 设置侧滑菜单状态
+     * 打开侧滑菜单
      *
      * @param position 位置
-     * @param open     是否打开
+     * @param animator 是否使用动画
      */
-    public void setSwipeStatus(int position, boolean open) {
-        RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
-        View itemLayout = findSwipeItemLayout(holder.itemView);
-        View menuLayout = findSwipeMenuLayout(holder.itemView);
-        View menuView = findSwipeMenuView(holder.itemView);
-        int menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
-        getItems().get(position).setOpen(open);
-        if (menuLayout != null && itemLayout != null) {
-            if (open) {
-                itemLayout.setTranslationX(-menuWidth);
-                menuLayout.setTranslationX(0);
-            } else {
-                itemLayout.setTranslationX(0);
-                menuLayout.setTranslationX(0);
-            }
-        }
+    public void openSwipe(int position, boolean animator) {
+        setSwipeMenu(position, true, animator);
     }
 
     /**
      * 打开侧滑菜单
+     *
      * @param position 位置
      */
     public void openSwipe(int position) {
-        setSwipeStatus(position, true);
+        setSwipeMenu(position, true, true);
+    }
+
+
+    /**
+     * 关闭侧滑菜单
+     *
+     * @param position 位置
+     */
+    public void closeSwipe(int position) {
+        setSwipeMenu(position, false, true);
     }
 
     /**
      * 关闭侧滑菜单
+     *
      * @param position 位置
+     * @param animator 是否使用动画
      */
-    public void closeSwipe(int position) {
-        setSwipeStatus(position, false);
+    public void closeSwipe(int position, boolean animator) {
+        setSwipeMenu(position, false, animator);
     }
 
     /**
@@ -1373,15 +1421,31 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         this.onLoadingListener = onLoadingListener;
     }
 
+    /**
+     * 设置滑动阈值
+     *
+     * @param swipeThreshold
+     */
     public void setSwipeThreshold(int swipeThreshold) {
         this.swipeThreshold = swipeThreshold;
     }
 
-    public void setSideRatio(float sideRatio) {
-        this.sideRatio = sideRatio;
+    /**
+     * 设置滑动比例
+     *
+     * @param swipeRatio
+     */
+    public void setSwipeRatio(float swipeRatio) {
+        this.swipeRatio = swipeRatio;
     }
 
-    public void setSideDuration(int sideDuration) {
-        this.sideDuration = sideDuration;
+    /**
+     * 滑动动画持续时间
+     *
+     * @param swipeDuration
+     */
+    public void setSwipeDuration(int swipeDuration) {
+        this.swipeDuration = swipeDuration;
     }
+
 }

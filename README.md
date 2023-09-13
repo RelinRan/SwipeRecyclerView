@@ -118,11 +118,9 @@ adapter.setShowSwipe(true);
 adapter.setOnItemClickListener((apt, v, position) -> {
      if (v.getId()==R.id.tv_delete){
          apt.removeItem(position);
-         //注意：删除item,一定需要调用此方法。
-         apt.closeSwipe(position);
      }
      if (v.getId()==R.id.tv_edit){
-        apt.closeSwipe(position);
+        apt.closeSwipe(position);//手动关闭侧滑菜单栏
      }
 });
 //设置数据源

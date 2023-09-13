@@ -1,6 +1,5 @@
 package androidx.ui.widget;
 
-import android.animation.ValueAnimator;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
@@ -27,31 +26,30 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     private int menuWidth;
 
     //横向滑动阈值
-    private int swipeThreshold = 30;
+    private int swipeThreshold = 25;
     //侧滑移动百分比
-    private float sideRatio = 0.5F;
+    private float swipeRatio = 1.0F;
     //侧滑动画持续事件
-    private int sideDuration = 300;
-
+    private int swipeDuration = 300;
+    private SwipeItemAnimator itemAnimator;
+    private SwipeItemAnimator menuAnimator;
 
     public SwipeItemTouchEvent(SwipeRecyclerAdapter<SwipeItem<T>> adapter, ViewHolder holder, int position) {
         this.adapter = adapter;
         this.holder = holder;
         this.position = position;
+        itemAnimator = new SwipeItemAnimator();
+        menuAnimator = new SwipeItemAnimator();
         itemLayout = adapter.findSwipeItemLayout(holder.itemView);
         menuLayout = adapter.findSwipeMenuLayout(holder.itemView);
         menuView = adapter.findSwipeMenuView(holder.itemView);
         menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
         SwipeItem item = adapter.getItems().get(position);
         boolean isOpen = item.isOpen();
-        if (menuLayout != null && itemLayout != null) {
-            if (isOpen) {
-                itemLayout.setTranslationX(-menuWidth);
-                menuLayout.setTranslationX(0);
-            } else {
-                itemLayout.setTranslationX(0);
-                menuLayout.setTranslationX(0);
-            }
+        if (isOpen) {
+            openSwipe(false);
+        } else {
+            closeSwipe(false);
         }
     }
 
@@ -86,16 +84,27 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                float itemX = Math.abs(itemLayout.getTranslationX());
-                if (itemX < menuWidth / 2) {
-                    closeSwipeEnforce();
-                }
-                if (itemX >= menuWidth / 2) {
-                    openSwipeEnforce();
+                float value = e.getX() - dx;
+                float itemTransX = itemLayout.getTranslationX();
+                float abs = Math.abs(itemTransX);
+                if (value > 0) {
+                    if (abs <= menuWidth * 0.99F) {
+                        closeSwipe(true);
+                    } else {
+                        openSwipe(true);
+                    }
+                } else {
+                    if (abs >= menuWidth * 0.01F) {
+                        openSwipe(true);
+                    } else {
+                        closeSwipe(true);
+                    }
                 }
                 if (System.currentTimeMillis() - dt < 30 && isMove) {
                     isMove = false;
                 }
+                dx = e.getX();
+                dy = e.getY();
                 break;
         }
         return isMove;
@@ -116,11 +125,13 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
                 if (parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
-                smoothSwipeLayoutBy(e, false, dx);
+                smoothSwipeLayoutBy(e, dx);
             }
             //垂直滑动
             if (Math.abs(dx) < Math.abs(dy)) {
-                closeSwipe();
+                if (isSwipeOpen()) {
+                    closeSwipe(true);
+                }
             }
         }
     }
@@ -138,203 +149,113 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
      * @param open
      */
     public void setSwipeOpen(boolean open) {
-        adapter.setItemSwipeOpen(position,open);
-    }
-
-    /**
-     * 关闭侧滑菜单
-     */
-    public void closeSwipe() {
-        if (isSwipeOpen()) {
-            if (itemLayout != null) {
-                float itemX = itemLayout.getTranslationX();
-                float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
-                setSwipeItemLayoutAnimatorValue(itemX, 0);
-                setSwipeMenuLayoutAnimatorValue(menuX, menuWidth);
-            }
-        }
+        adapter.getItems().get(position).setOpen(open);
     }
 
     /**
      * 滑动菜单位移
      *
-     * @param animator 是否动画
-     * @param mx       横向移动距离
+     * @param mx 横向移动距离
      */
-    public void smoothSwipeLayoutBy(MotionEvent e, boolean animator, float mx) {
-        mx *= sideRatio;
+    public void smoothSwipeLayoutBy(MotionEvent e, float mx) {
+        mx *= swipeRatio;
         if (itemLayout != null) {
             float itemLayoutX = itemLayout.getTranslationX() + mx;
-            if (itemLayoutX > -menuWidth && itemLayoutX < 0) {
-                setSwipeItemLayoutTranslationX(animator, itemLayoutX);
-                setSwipeOpen(true);
-            }
-            if (itemLayoutX <= -menuWidth) {
-                setSwipeItemLayoutTranslationX(animator, -menuWidth);
-                setSwipeOpen(true);
-                dx = e.getX();
-                dy = e.getY();
-            }
-            if (itemLayoutX >= 0) {
-                setSwipeItemLayoutTranslationX(animator, 0);
-                setSwipeOpen(false);
-                dx = e.getX();
-                dy = e.getY();
-            }
+            itemLayout.setTranslationX(itemLayoutX);
         }
         //菜单布局
         if (menuLayout != null) {
             float menuLayoutX = menuLayout.getTranslationX() + mx;
-            if (menuLayoutX > 0 && menuLayoutX < menuWidth) {
-                setSwipeMenuLayoutTranslationX(animator, menuLayoutX);
-                setSwipeOpen(true);
-            }
-            if (menuLayoutX <= 0) {
-                setSwipeMenuLayoutTranslationX(animator, 0);
-                setSwipeOpen(true);
-                dx = e.getX();
-                dy = e.getY();
-            }
-            if (menuLayoutX >= menuWidth) {
-                setSwipeMenuLayoutTranslationX(animator, menuWidth);
-                setSwipeOpen(false);
-                dx = e.getX();
-                dy = e.getY();
-            }
+            menuLayout.setTranslationX(menuLayoutX);
         }
-    }
-
-    /**
-     * 强制关闭侧滑
-     */
-    public void closeSwipeEnforce() {
-        if (itemLayout != null) {
-            float itemX = itemLayout.getTranslationX();
-            float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
-            setSwipeItemLayoutAnimatorValue(itemX, 0);
-            setSwipeMenuLayoutAnimatorValue(menuX, menuWidth);
-        }
+        dx = e.getX();
+        dy = e.getY();
     }
 
     /**
      * 强制打开侧滑菜单
      */
-    public void openSwipeEnforce() {
+    public void openSwipe(boolean animator) {
         if (itemLayout != null) {
-            float itemX = itemLayout.getTranslationX();
-            float menuX = menuLayout == null ? 0 : menuLayout.getTranslationX();
-            setSwipeItemLayoutAnimatorValue(itemX, -menuWidth);
-            setSwipeMenuLayoutAnimatorValue(menuX, 0);
+            if (animator) {
+                itemAnimator.start(itemLayout, -menuWidth);
+            } else {
+                itemLayout.setTranslationX(-menuWidth);
+            }
+        }
+        if (menuLayout != null) {
+            if (animator) {
+                menuAnimator.start(menuLayout, 0);
+            } else {
+                menuLayout.setTranslationX(0);
+            }
         }
         setSwipeOpen(true);
     }
 
     /**
-     * 设置item布局动画值
-     *
-     * @param start 开始
-     * @param end   结束
+     * 强制关闭侧滑
      */
-    private void setSwipeItemLayoutAnimatorValue(float start, float end) {
-        ValueAnimator animator = ValueAnimator.ofFloat(start, end);
-        animator.addUpdateListener(animation -> {
-            float value = (Float) animator.getAnimatedValue();
-            setSwipeItemLayoutTranslationX(false, value);
-            if (value == 0) {
-                setSwipeOpen(false);
+    public void closeSwipe(boolean animator) {
+        if (itemLayout != null) {
+            if (animator) {
+                itemAnimator.start(itemLayout, 0);
+            } else {
+                itemLayout.setTranslationX(0);
             }
-        });
-        animator.setDuration(sideDuration);
-        animator.start();
-    }
-
-    /**
-     * 设置菜单布局动画值
-     *
-     * @param start 开始
-     * @param end   结束
-     */
-    private void setSwipeMenuLayoutAnimatorValue(float start, float end) {
-        ValueAnimator animator = ValueAnimator.ofFloat(start, end);
-        animator.addUpdateListener(animation -> {
-            float value = (Float) animator.getAnimatedValue();
-            setSwipeMenuLayoutTranslationX(false, value);
-            if (value == menuWidth) {
-                setSwipeOpen(false);
+        }
+        if (menuLayout != null) {
+            if (animator) {
+                menuAnimator.start(menuLayout, menuWidth);
+            } else {
+                menuLayout.setTranslationX(menuWidth);
             }
-        });
-        animator.setDuration(sideDuration);
-        animator.start();
+        }
+        setSwipeOpen(false);
     }
 
-    /**
-     * 设置滑动RecyclerView Item布局x位移
-     *
-     * @param animator     是否动画
-     * @param translationX x轴移动距离
-     */
-    public void setSwipeItemLayoutTranslationX(boolean animator, float translationX) {
-        if (itemLayout == null) {
-            return;
-        }
-        if (animator) {
-            setSwipeItemLayoutAnimatorValue(itemLayout.getTranslationX(), translationX);
-        } else {
-            itemLayout.setTranslationX(translationX);
-        }
-    }
-
-    /**
-     * 设置滑动RecyclerView Menu布局x位移
-     *
-     * @param animator     是否动画
-     * @param translationX x轴移动距离
-     */
-    public void setSwipeMenuLayoutTranslationX(boolean animator, float translationX) {
-        if (menuLayout == null) {
-            return;
-        }
-        if (animator) {
-            setSwipeMenuLayoutAnimatorValue(menuLayout.getTranslationX(), translationX);
-        } else {
-            menuLayout.setTranslationX(translationX);
-        }
-    }
 
     /**
      * @return 侧滑百分比（移动距离判断）
      */
-    public float getSideRatio() {
-        return sideRatio;
+    public float getSwipeRatio() {
+        return swipeRatio;
     }
 
     /**
      * 设置侧滑百分比（移动距离判断）
      *
-     * @param sideRatio
+     * @param swipeRatio
      */
-    public void setSideRatio(float sideRatio) {
-        this.sideRatio = sideRatio;
+    public void setSwipeRatio(float swipeRatio) {
+        this.swipeRatio = swipeRatio;
     }
 
     /**
      * @return 侧滑持续动画时长（移动距离判断）
      */
-    public int getSideDuration() {
-        return sideDuration;
+    public int getSwipeDuration() {
+        return swipeDuration;
     }
 
     /**
      * 设置侧滑持续动画时长（移动距离判断）
      *
-     * @param sideDuration
+     * @param swipeDuration
      */
-    public void setSideDuration(int sideDuration) {
-        this.sideDuration = sideDuration;
+    public void setSwipeDuration(int swipeDuration) {
+        this.swipeDuration = swipeDuration;
+        if (itemAnimator != null) {
+            itemAnimator.setDuration(swipeDuration);
+        }
+        if (menuAnimator != null) {
+            menuAnimator.setDuration(swipeDuration);
+        }
     }
 
     /**
      * 滑动阈值
+     *
      * @param swipeThreshold
      */
     public void setSwipeThreshold(int swipeThreshold) {
