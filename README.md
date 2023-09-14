@@ -1,12 +1,12 @@
-# SwipeRecyclerView
+#### SwipeRecyclerView
 支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)
-# 资源
+#### 资源
 |名字|资源|
 |-|-|
 |AAR|[swipe_recycler_view.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/main/aar)|
 |GitHub |[SwipeRecyclerView](https://github.com/RelinRan/SwipeRecyclerView)|
 |Gitee|[SwipeRecyclerView](https://gitee.com/relin/SwipeRecyclerView)|
-## Maven
+#### Maven
 1.build.grade
 ```
 allprojects {
@@ -23,15 +23,14 @@ dependencies {
 }
 ```
 
-## 侧滑功能
-### xml布局
+#### Xml
 ```
 <androidx.ui.widget.SwipeRecyclerView
   android:id="@+id/rv_content"
   android:layout_width="match_parent"
   android:layout_height="match_parent" />
 ```
-### Adapter
+#### Adapter
 注意：继承SwipeRecyclerAdapter ，<String>为item泛型
 ```
 public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
@@ -106,10 +105,12 @@ item布局 item_text
 
 </LinearLayout>
 ```
-### Activity|Fragment
+#### 设置加载
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
 rv_content.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
+//设置是否支持长按拖拽移动
+rv_content.setLongPressDragEnabled(false);
 //适配器
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 //设置侧滑菜单可用
@@ -118,7 +119,7 @@ adapter.setShowSwipe(true);
 adapter.setShowLoading(true);
 //设置加载更多颜色
 adapter.setLoadingBackgroundColor(Color.parseColor("#6835C3"));
-//强制显示加载更多
+//设置加载更多监听
 adapter.setOnLoadListener(() -> {
     //处理加载更多逻辑
     new Handler().postDelayed(new Runnable() {
@@ -145,31 +146,29 @@ for (int i = 0; i < 50; i++) {
     list.add("Item - "+i);
 }
 adapter.setDataSource(list);
-rv_content.setLongPressDragEnabled(false);
 ```
-## 长按拖拽
-### SwipeRecyclerView
+#### 长按拖拽
+SwipeRecyclerView
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
 rv_content.setLongPressDragEnabled(true);
 ```
-### RecyclerView
+RecyclerView
 ```
 RecyclerView rv_content = findViewById(R.id.rv_content);
 SwipeItemTouchHelperCallback callback = new SwipeItemTouchHelperCallback();
 ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
 touchHelper.attachToRecyclerView(rv_content);
 ```
-## Header功能
-Header功能支持SwipeRecyclerView、RecyclerView
-### 代码设置
+#### Header功能
+代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setHeaderArgs(xxxx);
 View headerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
 adapter.setHeaderView(headerView);
 ```
-### Xml设置
+xml设置
 ```
 public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
@@ -190,16 +189,15 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
     }
 }
 ```
-## Footer功能
-Footer功能支持SwipeRecyclerView、RecyclerView
-### 代码设置
+#### Footer功能
+代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setFooterArgs(xxx);
 View footerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
 adapter.setFooterView(footerView);
 ```
-### Xml设置
+xml设置
 ```
 public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
@@ -220,10 +218,8 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
     }
 }
 ```
-## Loading功能自定义
-Loading功能支持SwipeRecyclerView、RecyclerView
-
-### 代码设置
+#### Loading功能自定义
+代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setLoadingArgs(xxxx);
@@ -231,7 +227,7 @@ View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);
 loadingView.setId(R.id.item_loading_more);
 adapter.setFooterView(loadingView);
 ```
-### Xml设置
+xml设置
 ```
 public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
 
@@ -251,52 +247,4 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
        // TODO: Loading数据绑定逻辑,args数据来源于setLoadingArgs(xxx);
     }
 }
-```
-## 获取触摸事件助手
-```
- ItemTouchHelper getItemTouchHelper();
-```
-## 设置Item触摸助手回调
-```
- setSwipeItemTouchHelperCallback(SwipeItemTouchHelperCallback callback);
-```
-## 设置是否自动处理移动逻辑
-```
-setDragMoveAuto(boolean dragMoveAuto);
-```
-## 设置是否自动处理选择逻辑
-```
-setSelectedAuto(boolean selectedAuto);
-```
-## 设置是否可长按拖拽
-```
-setLongPressDragEnabled(boolean longPressDragEnabled) ;
-```
-## 设置拖动标识
-```
-setDragFlags(int dragFlags);
-```
-## 设置滑动标识
-```
-setSwipeFlags(int swipeFlags);
-```
-## 设置触摸选中监听
-```
-setOnItemTouchSelectedChangedListener(OnItemTouchSelectedChangedListener listener);
-```
-## 设置长按拖拽移动监听
-```
-setOnItemTouchMoveListener(OnItemTouchMoveListener listener);
-```
-## 触摸横向滑动完成监听
-```
-setOnItemTouchSwipedListener(OnItemTouchSwipedListener  listener);
-```
-## 打开侧滑菜单
-```
-openSwipe();
-```
-## 关闭侧滑菜单
-```
-closeSwipe();
 ```
