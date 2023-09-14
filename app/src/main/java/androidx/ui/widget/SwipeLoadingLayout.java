@@ -15,7 +15,6 @@ import androidx.annotation.ColorInt;
 import androidx.annotation.Nullable;
 import androidx.core.widget.NestedScrollView;
 
-import com.androidx.widget.R;
 
 /**
  * 加载更多

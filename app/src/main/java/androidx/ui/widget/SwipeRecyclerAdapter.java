@@ -10,12 +10,11 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.ColorRes;
+import androidx.annotation.DrawableRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.androidx.widget.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -149,6 +148,14 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * 菜单动画
      */
     private SwipeItemAnimator menuAnimator;
+    /**
+     * 加载更多背景颜色
+     */
+    private int loadingBackgroundColor = -1;
+    /**
+     * 加载更多背景资源
+     */
+    private int loadingBackgroundResId = -1;
 
     public SwipeRecyclerAdapter(Context context) {
         this.context = context;
@@ -239,7 +246,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public SwipeLoadingLayout findSwipeLoadingLayout() {
+    protected SwipeLoadingLayout findSwipeLoadingLayout() {
         if (getLoadingViewHolder() != null) {
             return getLoadingViewHolder().find(R.id.item_loading_more);
         }
@@ -262,6 +269,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * @param v
      */
     protected void onScrolledMore(View v) {
+        closeSwipe();
         if (isHasLoading() && isShowLoading()) {
             boolean isScrolledTop = v.canScrollVertically(1);
             boolean isScrolledBottom = v.canScrollVertically(-1);
@@ -320,7 +328,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public View getHeaderView() {
+    protected View getHeaderView() {
         return headerView;
     }
 
@@ -357,7 +365,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public ViewHolder getHeaderViewHolder() {
+    protected ViewHolder getHeaderViewHolder() {
         return headerViewHolder;
     }
 
@@ -406,7 +414,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public View getFooterView() {
+    protected View getFooterView() {
         return footerView;
     }
 
@@ -434,7 +442,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public ViewHolder getFooterViewHolder() {
+    protected ViewHolder getFooterViewHolder() {
         return footerViewHolder;
     }
 
@@ -497,11 +505,29 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     }
 
     /**
+     * 设置加载更多背景颜色
+     *
+     * @param color
+     */
+    public void setLoadingBackgroundColor(int color) {
+        this.loadingBackgroundColor = color;
+    }
+
+    /**
+     * 设置加载更多背景资源
+     *
+     * @param resid
+     */
+    public void setLoadingBackgroundResource(@DrawableRes int resid) {
+        this.loadingBackgroundResId = resid;
+    }
+
+    /**
      * 获取加载更多View
      *
      * @return
      */
-    public View getLoadingView() {
+    protected View getLoadingView() {
         return loadingView;
     }
 
@@ -529,7 +555,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      *
      * @return
      */
-    public ViewHolder getLoadingViewHolder() {
+    protected ViewHolder getLoadingViewHolder() {
         return loadingViewHolder;
     }
 
@@ -613,7 +639,6 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         return child.findViewById(ID_SWIPE_ITEM_GROUP);
     }
 
-
     /**
      * 找到侧滑MenuLayout
      *
@@ -624,7 +649,6 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         return child.findViewById(ID_SWIPE_MENU_GROUP);
     }
 
-
     /**
      * 找到MenuView
      *
@@ -634,7 +658,6 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     public View findSwipeMenuView(View child) {
         return child.findViewById(ID_SWIPE_MENU);
     }
-
 
     /**
      * 获取item菜单View
@@ -856,6 +879,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         if (holder == null) {
             return;
         }
+        View itemView = holder.itemView;
         View itemLayout = findSwipeItemLayout(holder.itemView);
         View menuLayout = findSwipeMenuLayout(holder.itemView);
         View menuView = findSwipeMenuView(holder.itemView);
@@ -864,26 +888,26 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         boolean isOpen = item.isOpen();
         if (animator) {
             if (itemAnimator == null) {
-                itemAnimator = new SwipeItemAnimator();
+                itemAnimator = new SwipeItemAnimator(this);
                 itemAnimator.setDuration(swipeDuration);
             }
             if (menuAnimator == null) {
-                menuAnimator = new SwipeItemAnimator();
+                menuAnimator = new SwipeItemAnimator(this);
                 menuAnimator.setDuration(swipeDuration);
             }
         }
         if (isOpen) {
             if (animator) {
-                itemAnimator.start(itemLayout, -menuWidth);
-                menuAnimator.start(menuLayout, 0);
+                itemAnimator.start(itemView, itemLayout, -menuWidth);
+                menuAnimator.start(itemView, menuLayout, 0);
             } else {
                 itemLayout.setTranslationX(-menuWidth);
                 menuLayout.setTranslationX(0);
             }
         } else {
             if (animator) {
-                itemAnimator.start(itemLayout, 0);
-                menuAnimator.start(menuLayout, menuWidth);
+                itemAnimator.start(itemView, itemLayout, 0);
+                menuAnimator.start(itemView, menuLayout, menuWidth);
             } else {
                 itemLayout.setTranslationX(0);
                 menuLayout.setTranslationX(menuWidth);
@@ -920,6 +944,50 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
         setSwipeMenu(position, true, true);
     }
 
+    /**
+     * 关闭侧滑菜单
+     */
+    public void closeSwipe() {
+        List<SwipeItem<T>> items = getItems();
+        int size = items == null ? 0 : items.size();
+        for (int i = 0; i < size; i++) {
+            if (getItems().get(i).isOpen()) {
+                closeSwipe(i);
+            }
+        }
+    }
+
+    /**
+     * 是否有打开的侧滑
+     *
+     * @return
+     */
+    public boolean isHasOpenSwipe() {
+        List<SwipeItem<T>> items = getItems();
+        int size = items == null ? 0 : items.size();
+        for (int i = 0; i < size; i++) {
+            if (getItems().get(i).isOpen()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 找到打开的侧滑菜单位置
+     *
+     * @return
+     */
+    public int findOpenSwipeItemPosition() {
+        List<SwipeItem<T>> items = getItems();
+        int size = items == null ? 0 : items.size();
+        for (int i = 0; i < size; i++) {
+            if (getItems().get(i).isOpen()) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     /**
      * 关闭侧滑菜单
@@ -948,6 +1016,12 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      */
     protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
         loadingViewHolder = holder;
+        if (loadingBackgroundColor != -1) {
+            holder.itemView.setBackgroundColor(loadingBackgroundColor);
+        }
+        if (loadingBackgroundResId != -1) {
+            holder.itemView.setBackgroundResource(loadingBackgroundResId);
+        }
     }
 
     @Override

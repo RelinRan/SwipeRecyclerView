@@ -15,8 +15,6 @@ import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.Nullable;
 
-import com.androidx.widget.R;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

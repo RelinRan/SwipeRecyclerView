@@ -34,7 +34,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.view.ViewCompat;
 
-import com.androidx.widget.R;
 
 /**
  * 创建私有类以解决 AnimationListeners 的问题

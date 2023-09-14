@@ -20,8 +20,6 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.Nullable;
 
-import com.androidx.widget.R;
-
 import java.util.HashMap;
 import java.util.Map;
 

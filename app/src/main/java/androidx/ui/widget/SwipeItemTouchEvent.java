@@ -4,11 +4,18 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
 
+/**
+ * 侧滑触摸事件
+ *
+ * @param <T>
+ */
 public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
 
     private SwipeRecyclerAdapter<SwipeItem<T>> adapter;
     private ViewHolder holder;
+    private ViewParent parent;
     private int position;
+    private View itemView;
     //itemView容器
     private View itemLayout;
     //菜单容器
@@ -16,6 +23,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     //菜单View
     private View menuView;
     private float dx, dy;
+    private int directionX;
     private long dt = 0;
     private boolean isMove;
     private float distanceX;
@@ -31,18 +39,22 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     private float swipeRatio = 1.0F;
     //侧滑动画持续事件
     private int swipeDuration = 300;
+    //item动画
     private SwipeItemAnimator itemAnimator;
+    //菜单动画
     private SwipeItemAnimator menuAnimator;
 
     public SwipeItemTouchEvent(SwipeRecyclerAdapter<SwipeItem<T>> adapter, ViewHolder holder, int position) {
         this.adapter = adapter;
         this.holder = holder;
         this.position = position;
-        itemAnimator = new SwipeItemAnimator();
-        menuAnimator = new SwipeItemAnimator();
-        itemLayout = adapter.findSwipeItemLayout(holder.itemView);
-        menuLayout = adapter.findSwipeMenuLayout(holder.itemView);
-        menuView = adapter.findSwipeMenuView(holder.itemView);
+        itemView = holder.itemView;
+        parent = itemView.getParent();
+        itemAnimator = new SwipeItemAnimator(adapter);
+        menuAnimator = new SwipeItemAnimator(adapter);
+        itemLayout = adapter.findSwipeItemLayout(itemView);
+        menuLayout = adapter.findSwipeMenuLayout(itemView);
+        menuView = adapter.findSwipeMenuView(itemView);
         menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
         SwipeItem item = adapter.getItems().get(position);
         boolean isOpen = item.isOpen();
@@ -60,11 +72,33 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     }
 
     /**
+     * 不允许打断触摸时间
+     *
+     * @param disallow
+     */
+    public void requestDisallowInterceptTouchEvent(boolean disallow) {
+        ViewParent parent = holder.itemView.getParent();
+        if (parent != null) {
+            parent.requestDisallowInterceptTouchEvent(disallow);
+        }
+    }
+
+    public void setItemLongClickable(boolean enable) {
+        holder.itemView.setLongClickable(enable);
+    }
+
+    /**
      * 触摸事件处理
      *
      * @param e
      */
-    protected boolean touchSwipeEvent(MotionEvent e) {
+    protected void touchSwipeEvent(MotionEvent e) {
+        int openPosition = adapter.findOpenSwipeItemPosition();
+        //打开菜单不是当前操作的位置就不管
+        if (openPosition != -1 && position != openPosition) {
+            setItemLongClickable(true);
+            return;
+        }
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 dx = e.getX();
@@ -77,61 +111,55 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
                 distanceY = e.getY() - dy;
                 adx = Math.abs(distanceX);
                 ady = Math.abs(distanceY);
+                directionX = distanceX >= 0 ? 1 : -1;
                 isMove = adx > ady && adx > swipeThreshold;
-                if (isMove) {
-                    moveSwipeItemMenu(e, distanceX, distanceY);
-                }
+                moveSwipeItemMenu(e, distanceX, distanceY);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                float value = e.getX() - dx;
                 float itemTransX = itemLayout.getTranslationX();
-                float abs = Math.abs(itemTransX);
-                if (value > 0) {
-                    if (abs <= menuWidth * 0.99F) {
-                        closeSwipe(true);
-                    } else {
-                        openSwipe(true);
-                    }
+                float boundary = Math.abs(itemTransX / menuWidth);
+                boolean open = isSwipeOpen();
+                //左滑动
+                if (directionX == -1 && open == false) {
+                    open = boundary >= 0.10F;
+                }
+                //右滑动
+                if (directionX == 1 && open == true) {
+                    open = 1 - boundary <= 0.10F;
+                }
+                if (open) {
+                    openSwipe(true);
                 } else {
-                    if (abs >= menuWidth * 0.01F) {
-                        openSwipe(true);
-                    } else {
-                        closeSwipe(true);
-                    }
+                    closeSwipe(true);
                 }
                 if (System.currentTimeMillis() - dt < 30 && isMove) {
                     isMove = false;
                 }
-                dx = e.getX();
-                dy = e.getY();
                 break;
         }
-        return isMove;
     }
 
     /**
      * 水平移动item
      *
-     * @param e  操作事件
-     * @param dx 水平间距
-     * @param dy 垂直间距
+     * @param e   操作事件
+     * @param dtx 水平间距
+     * @param dty 垂直间距
      */
-    private void moveSwipeItemMenu(MotionEvent e, float dx, float dy) {
+    private void moveSwipeItemMenu(MotionEvent e, float dtx, float dty) {
         if (adapter.isSwipeEnable() && e.getPointerCount() < 2) {
             //水平滑动
-            if (Math.abs(dx) > Math.abs(dy)) {
-                ViewParent parent = holder.itemView.getParent();
-                if (parent != null) {
-                    parent.requestDisallowInterceptTouchEvent(true);
-                }
-                smoothSwipeLayoutBy(e, dx);
+            if (Math.abs(dtx) > Math.abs(dty)) {
+                requestDisallowInterceptTouchEvent(true);
+                setItemLongClickable(false);
+                translationSwipeBy(dtx);
+                dx = e.getX();
+                dy = e.getY();
             }
             //垂直滑动
-            if (Math.abs(dx) < Math.abs(dy)) {
-                if (isSwipeOpen()) {
-                    closeSwipe(true);
-                }
+            if (Math.abs(dtx) < Math.abs(dty)) {
+
             }
         }
     }
@@ -157,7 +185,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
      *
      * @param mx 横向移动距离
      */
-    public void smoothSwipeLayoutBy(MotionEvent e, float mx) {
+    public void translationSwipeBy(float mx) {
         mx *= swipeRatio;
         if (itemLayout != null) {
             float itemLayoutX = itemLayout.getTranslationX() + mx;
@@ -168,8 +196,6 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
             float menuLayoutX = menuLayout.getTranslationX() + mx;
             menuLayout.setTranslationX(menuLayoutX);
         }
-        dx = e.getX();
-        dy = e.getY();
     }
 
     /**
@@ -178,14 +204,14 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     public void openSwipe(boolean animator) {
         if (itemLayout != null) {
             if (animator) {
-                itemAnimator.start(itemLayout, -menuWidth);
+                itemAnimator.start(holder.itemView, itemLayout, -menuWidth);
             } else {
                 itemLayout.setTranslationX(-menuWidth);
             }
         }
         if (menuLayout != null) {
             if (animator) {
-                menuAnimator.start(menuLayout, 0);
+                menuAnimator.start(itemView, menuLayout, 0);
             } else {
                 menuLayout.setTranslationX(0);
             }
@@ -199,14 +225,14 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     public void closeSwipe(boolean animator) {
         if (itemLayout != null) {
             if (animator) {
-                itemAnimator.start(itemLayout, 0);
+                itemAnimator.start(itemView, itemLayout, 0);
             } else {
                 itemLayout.setTranslationX(0);
             }
         }
         if (menuLayout != null) {
             if (animator) {
-                menuAnimator.start(menuLayout, menuWidth);
+                menuAnimator.start(itemView, menuLayout, menuWidth);
             } else {
                 menuLayout.setTranslationX(menuWidth);
             }

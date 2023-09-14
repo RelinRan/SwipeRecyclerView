@@ -19,7 +19,7 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.13.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.14.1'
 }
 ```
 
@@ -114,34 +114,51 @@ rv_content.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VER
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 //设置侧滑菜单可用
 adapter.setShowSwipe(true);
+//滑动到底部会自动显示加载更多
+adapter.setShowLoading(true);
+//设置加载更多颜色
+adapter.setLoadingBackgroundColor(Color.parseColor("#6835C3"));
+//强制显示加载更多
+adapter.setOnLoadListener(() -> {
+    //处理加载更多逻辑
+    new Handler().postDelayed(new Runnable() {
+        @Override
+        public void run() {
+            adapter.setLoading(false);
+        }
+    },1000);
+});
 //设置此方法之前，在SwipeItemAdapter中holder.addItemClick(R.id.xxx);
 adapter.setOnItemClickListener((apt, v, position) -> {
-     if (v.getId()==R.id.tv_delete){
-         apt.removeItem(position);
-     }
-     if (v.getId()==R.id.tv_edit){
-        apt.closeSwipe(position);//手动关闭侧滑菜单栏
-     }
+    if (v.getId()==R.id.tv_delete){
+        apt.removeItem(position);
+        //注意：删除item,一定需要调用此方法。
+    }
+    if (v.getId()==R.id.tv_edit){
+        adapter.closeSwipe();
+    }
 });
+rv_content.setAdapter(adapter);
 //设置数据源
 List<String> list = new ArrayList<>();
 for (int i = 0; i < 50; i++) {
-    list.add("item "+(i+1));
+    list.add("Item - "+i);
 }
 adapter.setDataSource(list);
+rv_content.setLongPressDragEnabled(false);
 ```
 ## 长按拖拽
+### SwipeRecyclerView
+```
+SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
+rv_content.setLongPressDragEnabled(true);
+```
 ### RecyclerView
 ```
 RecyclerView rv_content = findViewById(R.id.rv_content);
 SwipeItemTouchHelperCallback callback = new SwipeItemTouchHelperCallback();
 ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
 touchHelper.attachToRecyclerView(rv_content);
-```
-### SwipeRecyclerView
-```
-SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
-rv_content.setLongPressDragEnabled(true);
 ```
 ## Header功能
 Header功能支持SwipeRecyclerView、RecyclerView
@@ -203,13 +220,15 @@ public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
     }
 }
 ```
-## Loading功能(加载更多)
+## Loading功能自定义
 Loading功能支持SwipeRecyclerView、RecyclerView
+
 ### 代码设置
 ```
 SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 adapter.setLoadingArgs(xxxx);
-View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
+View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);
+loadingView.setId(R.id.item_loading_more);
 adapter.setFooterView(loadingView);
 ```
 ### Xml设置
