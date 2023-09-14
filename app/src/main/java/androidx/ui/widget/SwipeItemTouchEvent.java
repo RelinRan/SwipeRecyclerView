@@ -32,7 +32,6 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     private float ady;
     //菜单宽度
     private int menuWidth;
-
     //横向滑动阈值
     private int swipeThreshold = 25;
     //侧滑移动百分比
