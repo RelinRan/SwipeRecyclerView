@@ -3,7 +3,7 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
-    namespace "androidx.ui.widget"
+    namespace "androidx.widget"
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 30

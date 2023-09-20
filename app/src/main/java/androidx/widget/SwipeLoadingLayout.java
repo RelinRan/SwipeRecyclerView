@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -118,13 +118,13 @@ public class SwipeLoadingLayout extends LinearLayout implements NestedScrollView
             lineLength = array.getDimension(R.styleable.SwipeLoadingLayout_lineLength, lineLength);
             loadingMarginRight = array.getDimensionPixelOffset(R.styleable.SwipeLoadingLayout_loadingMarginRight, loadingMarginRight);
             more = array.getString(R.styleable.SwipeLoadingLayout_more);
-            more = more == null ? MORE : more;
             empty = array.getString(R.styleable.SwipeLoadingLayout_empty);
-            empty = empty == null ? EMPTY : empty;
             textSize = array.getDimensionPixelSize(R.styleable.SwipeLoadingLayout_android_textSize, textSize);
             textColor = array.getColor(R.styleable.SwipeLoadingLayout_android_textColor, textColor);
             array.recycle();
         }
+        more = more == null ? MORE : more;
+        empty = empty == null ? EMPTY : empty;
         onCreateView();
     }
 

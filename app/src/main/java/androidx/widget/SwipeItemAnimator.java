@@ -1,8 +1,9 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 
 /**
  * 动画
@@ -10,7 +11,7 @@ import android.view.View;
 public class SwipeItemAnimator<T> implements ValueAnimator.AnimatorUpdateListener, Animator.AnimatorListener {
 
     private ValueAnimator animator;
-    private int duration = 300;
+    private int duration = 150;
     private View animatorView;
     private View itemView;
     private SwipeRecyclerAdapter<SwipeItem<T>> adapter;
@@ -36,6 +37,7 @@ public class SwipeItemAnimator<T> implements ValueAnimator.AnimatorUpdateListene
         this.itemView = itemView;
         this.animatorView = view;
         animator = ValueAnimator.ofFloat(view.getTranslationX(), end);
+        animator.setInterpolator(new LinearInterpolator());
         animator.addUpdateListener(this);
         animator.addListener(this);
         animator.setDuration(duration);
@@ -54,7 +56,9 @@ public class SwipeItemAnimator<T> implements ValueAnimator.AnimatorUpdateListene
     @Override
     public void onAnimationUpdate(ValueAnimator valueAnimator) {
         float value = (Float) valueAnimator.getAnimatedValue();
-        animatorView.setTranslationX(value);
+        if (animatorView!=null){
+            animatorView.setTranslationX(value);
+        }
     }
 
     @Override

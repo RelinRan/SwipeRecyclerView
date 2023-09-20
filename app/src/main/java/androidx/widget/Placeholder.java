@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import android.content.Context;
 import android.content.res.Resources;

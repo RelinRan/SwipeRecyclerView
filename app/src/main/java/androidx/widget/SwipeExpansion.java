@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 public class SwipeExpansion {
 

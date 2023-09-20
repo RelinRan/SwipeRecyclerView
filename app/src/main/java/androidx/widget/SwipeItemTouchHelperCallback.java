@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

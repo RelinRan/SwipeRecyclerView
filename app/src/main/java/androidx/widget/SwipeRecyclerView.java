@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -10,7 +10,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class SwipeRecyclerView extends RecyclerView {
-
 
     //是否可长按拖动
     private boolean longPressDragEnabled;
@@ -227,6 +226,16 @@ public class SwipeRecyclerView extends RecyclerView {
          */
         void onItemTouchSwiped(@NonNull ViewHolder viewHolder, int direction);
 
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        Adapter adapter = getAdapter();
+        if (adapter!=null&&adapter instanceof SwipeRecyclerAdapter){
+            SwipeRecyclerAdapter sra = (SwipeRecyclerAdapter) adapter;
+            sra.release();
+        }
+        super.onDetachedFromWindow();
     }
 
 }

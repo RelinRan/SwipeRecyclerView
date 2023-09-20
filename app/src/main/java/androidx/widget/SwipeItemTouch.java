@@ -1,4 +1,4 @@
-package androidx.ui.widget;
+package androidx.widget;
 
 import android.view.MotionEvent;
 import android.view.View;
@@ -9,11 +9,10 @@ import android.view.ViewParent;
  *
  * @param <T>
  */
-public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
+public class SwipeItemTouch<T> implements View.OnTouchListener {
 
-    private SwipeRecyclerAdapter<SwipeItem<T>> adapter;
+    private SwipeRecyclerAdapter<T> adapter;
     private ViewHolder holder;
-    private ViewParent parent;
     private int position;
     private View itemView;
     //itemView容器
@@ -44,19 +43,27 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
     //菜单动画
     private SwipeItemAnimator menuAnimator;
 
-    public SwipeItemTouchEvent(SwipeRecyclerAdapter<SwipeItem<T>> adapter, ViewHolder holder, int position) {
+    public SwipeItemTouch(SwipeRecyclerAdapter<T> adapter) {
         this.adapter = adapter;
+    }
+
+    /**
+     * 初始化
+     *
+     * @param holder   View容器
+     * @param position 位置
+     */
+    public void initialize(ViewHolder holder, int position) {
         this.holder = holder;
         this.position = position;
         itemView = holder.itemView;
-        parent = itemView.getParent();
-        itemAnimator = new SwipeItemAnimator(adapter);
-        menuAnimator = new SwipeItemAnimator(adapter);
+        SwipeItem<T> item = adapter.getSwipeItem(position);
+        itemAnimator = item.getItemAnimator();
+        menuAnimator = item.getMenuAnimator();
         itemLayout = adapter.findSwipeItemLayout(itemView);
         menuLayout = adapter.findSwipeMenuLayout(itemView);
         menuView = adapter.findSwipeMenuView(itemView);
         menuWidth = menuView == null ? 0 : menuView.getMeasuredWidth();
-        SwipeItem item = adapter.getItems().get(position);
         boolean isOpen = item.isOpen();
         if (isOpen) {
             openSwipe(false);
@@ -67,7 +74,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        touchSwipeEvent(event);
+        touchItem(event);
         return true;
     }
 
@@ -92,13 +99,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
      *
      * @param e
      */
-    protected void touchSwipeEvent(MotionEvent e) {
-        int openPosition = adapter.findOpenSwipeItemPosition();
-        //打开菜单不是当前操作的位置就不管
-        if (openPosition != -1 && position != openPosition) {
-            setItemLongClickable(true);
-            return;
-        }
+    protected void touchItem(MotionEvent e) {
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 dx = e.getX();
@@ -113,6 +114,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
                 ady = Math.abs(distanceY);
                 directionX = distanceX >= 0 ? 1 : -1;
                 isMove = adx > ady && adx > swipeThreshold;
+                itemView.setLongClickable(false);
                 moveSwipeItemMenu(e, distanceX, distanceY);
                 break;
             case MotionEvent.ACTION_UP:
@@ -168,7 +170,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
      * @return 滑动菜单是否打开
      */
     public boolean isSwipeOpen() {
-        return adapter.getItems().get(position).isOpen();
+        return adapter.getSwipeItem(position).isOpen();
     }
 
     /**
@@ -177,7 +179,7 @@ public class SwipeItemTouchEvent<T> implements View.OnTouchListener {
      * @param open
      */
     public void setSwipeOpen(boolean open) {
-        adapter.getItems().get(position).setOpen(open);
+        adapter.getSwipeItem(position).setOpen(open);
     }
 
     /**
