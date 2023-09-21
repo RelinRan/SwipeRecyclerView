@@ -96,6 +96,14 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      */
     private boolean showSwipe = false;
     /**
+     * 是否单个滑动菜单
+     */
+    private boolean singleSwipe = false;
+    /**
+     * 滑动页面自动关闭
+     */
+    private boolean scrollClose = false;
+    /**
      * 是否显示加载更多
      */
     private boolean showLoading = false;
@@ -138,6 +146,10 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      */
     private int swipeDuration = 300;
     /**
+     * 通知延迟时间
+     */
+    private int notifyDelay = 300;
+    /**
      * 加载更多背景颜色
      */
     private int loadingBackgroundColor = -1;
@@ -153,6 +165,10 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * 是否加载更多正在加载
      */
     private boolean loading;
+    /**
+     * item默认动画
+     */
+    private SwipeDefaultItemAnimator defaultItemAnimator;
 
     public SwipeRecyclerAdapter(Context context) {
         this.context = context;
@@ -194,6 +210,9 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
             scrollListener.setOnScrollListener(this);
         }
         recyclerView.addOnScrollListener(scrollListener);
+        defaultItemAnimator = new SwipeDefaultItemAnimator(this);
+        defaultItemAnimator.setDelay(notifyDelay);
+        recyclerView.setItemAnimator(defaultItemAnimator);
         this.recyclerView = recyclerView;
     }
 
@@ -254,6 +273,9 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * @param v
      */
     protected void onScrolledMore(View v) {
+        if (isScrollClose()) {
+            closeSwipe();
+        }
         if (isHasLoading() && isShowLoading()) {
             boolean isScrolledTop = v.canScrollVertically(1);
             boolean isScrolledBottom = v.canScrollVertically(-1);
@@ -589,6 +611,42 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     }
 
     /**
+     * 设置单个滑动菜单
+     *
+     * @param singleSwipe
+     */
+    public void setSingleSwipe(boolean singleSwipe) {
+        this.singleSwipe = singleSwipe;
+    }
+
+    /**
+     * 是否单个菜单滑动
+     *
+     * @return
+     */
+    public boolean isSingleSwipe() {
+        return singleSwipe;
+    }
+
+    /**
+     * 是否外部滚动关闭
+     *
+     * @return
+     */
+    public boolean isScrollClose() {
+        return scrollClose;
+    }
+
+    /**
+     * 设置外部滚动关闭
+     *
+     * @param scrollClose
+     */
+    public void setScrollClose(boolean scrollClose) {
+        this.scrollClose = scrollClose;
+    }
+
+    /**
      * 设置是否显示侧滑菜单
      *
      * @param showSwipe
@@ -698,7 +756,7 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
             if (loading instanceof SwipeLoadingLayout) {
                 loading.setId(R_ID_LOADING_MORE);
                 defaultLoadingView = (SwipeLoadingLayout) loading;
-            }else{
+            } else {
                 defaultLoadingView = loading.findViewById(R_ID_LOADING_MORE);
             }
             return loading;
@@ -938,9 +996,8 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      * @return
      */
     public int findOpenSwipeItemPosition() {
-        int size = items == null ? 0 : items.size();
-        for (int i = 0; i < size; i++) {
-            if (items.get(i).isOpen()) {
+        for (int i = 0; i < getSwipeItemCount(); i++) {
+            if (getSwipeItem(i).isOpen()) {
                 return i;
             }
         }
@@ -954,6 +1011,27 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
      */
     public void closeSwipe(int position) {
         setSwipeMenu(position, false, true);
+    }
+
+    /**
+     * 关闭所有已打开的侧滑菜单
+     */
+    public void closeSwipe() {
+        closeSwipe(true);
+    }
+
+    /**
+     * 关闭所有已打开的侧滑菜单
+     *
+     * @param animator 是否使用动画
+     */
+    public void closeSwipe(boolean animator) {
+        for (int i = 0; i < getSwipeItemCount(); i++) {
+            SwipeItem<T> item = getSwipeItem(i);
+            if (item.isOpen()) {
+                closeSwipe(i, animator);
+            }
+        }
     }
 
     /**
@@ -1553,6 +1631,15 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
     }
 
     /**
+     * 通知延迟时间
+     *
+     * @param notifyDelay
+     */
+    public void setNotifyDelay(int notifyDelay) {
+        this.notifyDelay = notifyDelay;
+    }
+
+    /**
      * 释放资源
      */
     public void release() {
@@ -1569,6 +1656,9 @@ public abstract class SwipeRecyclerAdapter<T> extends RecyclerView.Adapter imple
             }
             item.setItemAnimator(null);
             item.setMenuAnimator(null);
+        }
+        if (defaultItemAnimator != null) {
+            defaultItemAnimator.release();
         }
     }
 

@@ -2,11 +2,11 @@
 支持侧滑菜单、长按拖拽、Header、Footer、Loading(加载更多)  
 ![图片描述](./screen_shot.png)
 #### 资源
-|名字|资源|
+|名字|链接|
 |-|-|
-|AAR|[swipe_recycler_view.aar](https://github.com/RelinRan/SwipeRecyclerView/blob/main/aar)|
-|GitHub |[SwipeRecyclerView](https://github.com/RelinRan/SwipeRecyclerView)|
-|Gitee|[SwipeRecyclerView](https://gitee.com/relin/SwipeRecyclerView)|
+|aar|[下载](https://github.com/RelinRan/SwipeRecyclerView/blob/main/aar)|
+|github |[查看](https://github.com/RelinRan/SwipeRecyclerView)|
+|gitee|[查看](https://gitee.com/relin/SwipeRecyclerView)|
 #### Maven
 1.build.grade
 ```
@@ -20,77 +20,19 @@ allprojects {
 2./app/build.grade
 ```
 dependencies {
-    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.20.1'
+    implementation 'com.github.RelinRan:SwipeRecyclerView:2022.9.21.1'
 }
 ```
 
 #### Xml
+列表布局SwipeRecyclerView
 ```
 <androidx.widget.SwipeRecyclerView
   android:id="@+id/rv_content"
   android:layout_width="match_parent"
   android:layout_height="match_parent" />
 ```
-#### Adapter
-注意：继承SwipeRecyclerAdapter ，<String>为item泛型
-```
-public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
-
-    public SwipeItemAdapter(Context context) {
-        super(context);
-    }
-
-    @Override
-    public int getHeaderLayoutResId() {
-        //如果adapter.setHeaderView设置了此处不再需要重写设置
-        return R.layout.item_header;
-    }
-
-    @Override
-    public int getFooterLayoutResId() {
-        //如果adapter.setFooterView设置了此处不再需要重写设置
-        return R.layout.item_footer;
-    }
-
-    @Override
-    public int getLoadingLayoutResId() {
-        //如果adapter.setLoadingView设置了此处不再需要重写设置
-        return R.layout.item_loading;
-    }
-
-    @Override
-    protected int getItemLayoutResId(int viewType) {
-        // TODO: 普通Item布局
-        return R.layout.item_text;
-    }
-
-    @Override
-    protected int getItemSwipeMenuLayoutResId() {
-        // TODO: 侧滑菜单栏布局（例如：编辑、删除）
-        // 注意xml高度:MATCH_PARENT，宽度：WRAP_CONTENT
-        return R.layout.item_swipe_menu;
-    }
-
-    @Override
-    protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
-        super.onLoadingBindViewHolder(holder, args);
-        SwipeLoadingLayout loadingLayout = holder.find(R_ID_LOADING_MORE);
-        loadingLayout.setTextColor(Color.WHITE);
-    }
-
-    @Override
-    protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
-        super.onSwipeBindViewHolder(holder, position);
-        // TODO: 普通Item + 侧滑view数据绑定逻辑
-        holder.addItemClick(R.id.tv_delete);
-        holder.addItemClick(R.id.tv_close);
-        holder.addItemClick(R.id.tv_loading);
-        TextView textView = holder.find(R.id.tv_item_text);
-        textView.setText(getItem(position));
-    }
-}
-```
-item布局 item_text
+Item布局item_text
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -103,7 +45,7 @@ item布局 item_text
     android:text="item"
     android:textColor="@android:color/white" />
 ```
-菜单布局 item_swipe_menu
+菜单布局item_swipe_menu
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -140,7 +82,7 @@ item布局 item_text
 
 </LinearLayout>
 ```
-item布局 item_header
+Header布局item_header
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -159,7 +101,7 @@ item布局 item_header
 
 </LinearLayout>
 ```
-item布局 item_footer
+Footer布局item_footer
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -178,7 +120,7 @@ item布局 item_footer
 
 </LinearLayout>
 ```
-item布局 item_loading
+Loading布局item_loading
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -192,6 +134,90 @@ item布局 item_loading
 
 </FrameLayout>
 ```
+#### Adapter
+```
+import android.content.Context;
+import android.graphics.Color;
+import android.os.Bundle;
+import androidx.widget.SwipeLoadingLayout;
+import androidx.widget.SwipeRecyclerAdapter;
+import androidx.widget.ViewHolder;
+
+public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
+    public SwipeItemAdapter(Context context) {
+        super(context);
+    }
+
+    @Override
+    public int getHeaderLayoutResId() {
+        //如果adapter.setHeaderView设置了此处不再需要重写设置
+        return R.layout.item_header;
+    }
+
+    @Override
+    protected void onHeaderBindViewHolder(ViewHolder holder, Bundle args) {
+        super.onHeaderBindViewHolder(holder, args);
+        // TODO:Header数据绑定操作
+    }
+
+    @Override
+    protected int getItemLayoutResId(int viewType) {
+        // TODO: 普通Item布局
+        return R.layout.item_text;
+    }
+
+    @Override
+    protected void onItemBindViewHolder(ViewHolder holder, int position) {
+        super.onItemBindViewHolder(holder, position);
+        // TODO: 普通item数据绑定（如果有侧滑菜单，就重写onSwipeBindViewHolder方法，不在此处处理）
+    }
+
+    @Override
+    protected int getItemSwipeMenuLayoutResId() {
+        // TODO: 侧滑菜单栏布局（例如：编辑、删除）
+        // 注意xml高度:MATCH_PARENT，宽度：WRAP_CONTENT
+        return R.layout.item_swipe_menu;
+    }
+
+    @Override
+    protected void onSwipeBindViewHolder(ViewHolder holder, int position) {
+        super.onSwipeBindViewHolder(holder, position);
+        // TODO: 普通Item + 侧滑view数据绑定逻辑
+        holder.addItemClick(R.id.tv_delete);
+        holder.addItemClick(R.id.tv_close);
+        holder.addItemClick(R.id.tv_loading);
+        TextView textView = holder.find(R.id.tv_item_text);
+        textView.setText(getItem(position));
+    }
+
+    @Override
+    public int getFooterLayoutResId() {
+        //如果adapter.setFooterView设置了此处不再需要重写设置
+        return R.layout.item_footer;
+    }
+
+    @Override
+    protected void onFooterBindViewHolder(ViewHolder holder, Bundle args) {
+        super.onFooterBindViewHolder(holder, args);
+        // TODO:Footer数据绑定操作
+    }
+
+    @Override
+    public int getLoadingLayoutResId() {
+        //如果adapter.setLoadingView设置了此处不再需要重写设置
+        return R.layout.item_loading;
+    }
+
+    @Override
+    protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
+        super.onLoadingBindViewHolder(holder, args);
+        //此处是找到默认的加载更多View的SwipeLoadingLayout操作对象
+        SwipeLoadingLayout loadingLayout = holder.find(R_ID_LOADING_MORE);
+        loadingLayout.setTextColor(Color.WHITE);
+    }
+    
+}
+```
 #### 设置加载
 ```
 SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
@@ -201,6 +227,10 @@ SwipeItemAdapter adapter = new SwipeItemAdapter(this);
 
 //设置侧滑菜单可用
 adapter.setShowSwipe(true);
+//设置是否单个侧滑
+adapter.setSingleSwipe(true);
+//设置监听到除自己滑动就自动关闭侧滑
+adapter.setScrollClose(true);
 
 //设置长按拖拽
 rv_content.setLongPressDragEnabled(false);
@@ -263,105 +293,4 @@ for (int i = 0; i < 10; i++) {
     list.add("Item - "+i);
 }
 adapter.setDataSource(list);
-```
-#### 长按拖拽
-SwipeRecyclerView
-```
-SwipeRecyclerView rv_content = findViewById(R.id.rv_content);
-rv_content.setLongPressDragEnabled(true);
-```
-RecyclerView
-```
-RecyclerView rv_content = findViewById(R.id.rv_content);
-SwipeItemTouchHelperCallback callback = new SwipeItemTouchHelperCallback();
-ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
-touchHelper.attachToRecyclerView(rv_content);
-```
-#### Header功能
-代码设置
-```
-SwipeItemAdapter adapter = new SwipeItemAdapter(this);
-adapter.setHeaderArgs(xxxx);
-View headerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
-adapter.setHeaderView(headerView，120);
-```
-xml设置
-```
-public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
-
-    public SwipeItemAdapter(Context context) {
-        super(context);
-    }
-
-    @Override
-    public int getHeaderLayoutResId() {
-        // TODO: Header布局
-        return R.layout.xxx;
-    }
-
-    @Override
-    protected void onHeaderBindViewHolder(ViewHolder holder, Bundle args) {
-       super.onHeaderBindViewHolder(holder, args);
-       // TODO: Header数据绑定逻辑,args数据来源于setHeaderArgs(xxx);
-    }
-}
-```
-#### Footer功能
-代码设置
-```
-SwipeItemAdapter adapter = new SwipeItemAdapter(this);
-adapter.setFooterArgs(xxx);
-View footerView = LayoutInflater.from(context).inflate(R.layout.xxx,null);;
-adapter.setFooterView(footerView，120);
-```
-xml设置
-```
-public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
-
-    public SwipeItemAdapter(Context context) {
-        super(context);
-    }
-
-    @Override
-    public int getFooterLayoutResId() {
-        // TODO: Header布局
-        return R.layout.xxx;
-    }
-
-    @Override
-    protected void onFooterBindViewHolder(ViewHolder holder, Bundle args) {
-       super.onFooterBindViewHolder(holder, args);
-       // TODO: Footer数据绑定逻辑,args数据来源于setFooterArgs(xxx);
-    }
-}
-```
-#### Loading功能自定义
-代码设置
-```
-SwipeItemAdapter adapter = new SwipeItemAdapter(this);
-adapter.setLoadingArgs(xxxx);
-View loadingView = LayoutInflater.from(context).inflate(R.layout.xxx,null);
-loadingView.setId(R.id.item_loading_more);
-adapter.setFooterView(loadingView，120);
-```
-xml设置
-```
-public class SwipeItemAdapter extends SwipeRecyclerAdapter<String> {
-
-    public SwipeItemAdapter(Context context) {
-        super(context);
-    }
-
-    @Override
-    public int getLoadingLayoutResId() {
-        // TODO: Loading布局
-        return R.layout.xxx;
-    }
-
-    @Override
-    protected void onLoadingBindViewHolder(ViewHolder holder, Bundle args) {
-       super.onLoadingBindViewHolder(holder, args);
-       // TODO: Loading数据绑定逻辑,args数据来源于setLoadingArgs(xxx);
-    }
-}
 ```

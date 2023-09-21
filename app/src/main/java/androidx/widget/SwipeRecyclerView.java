@@ -13,8 +13,6 @@ public class SwipeRecyclerView extends RecyclerView {
 
     //是否可长按拖动
     private boolean longPressDragEnabled;
-    //触摸滑动监听
-    private OnItemTouchSwipedListener onItemTouchSwipedListener;
     //触摸助手
     private ItemTouchHelper touchHelper;
     //侧滑助手
@@ -45,7 +43,7 @@ public class SwipeRecyclerView extends RecyclerView {
     @Override
     public void setAdapter(@Nullable Adapter adapter) {
         super.setAdapter(adapter);
-        if (adapter instanceof SwipeRecyclerAdapter && adapter != null) {
+        if (adapter != null && adapter instanceof SwipeRecyclerAdapter) {
             SwipeRecyclerAdapter swipeRecyclerAdapter = (SwipeRecyclerAdapter) adapter;
             swipeRecyclerAdapter.attachRecyclerView(this);
         }
@@ -210,7 +208,6 @@ public class SwipeRecyclerView extends RecyclerView {
      * @param onItemTouchSwipedListener
      */
     public void setOnItemTouchSwipedListener(OnItemTouchSwipedListener onItemTouchSwipedListener) {
-        this.onItemTouchSwipedListener = onItemTouchSwipedListener;
         if (callback != null) {
             callback.setOnItemTouchSwipedListener(onItemTouchSwipedListener);
         }
@@ -231,7 +228,7 @@ public class SwipeRecyclerView extends RecyclerView {
     @Override
     protected void onDetachedFromWindow() {
         Adapter adapter = getAdapter();
-        if (adapter!=null&&adapter instanceof SwipeRecyclerAdapter){
+        if (adapter != null && adapter instanceof SwipeRecyclerAdapter) {
             SwipeRecyclerAdapter sra = (SwipeRecyclerAdapter) adapter;
             sra.release();
         }

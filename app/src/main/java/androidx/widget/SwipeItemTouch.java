@@ -100,6 +100,12 @@ public class SwipeItemTouch<T> implements View.OnTouchListener {
      * @param e
      */
     protected void touchItem(MotionEvent e) {
+        if (adapter.isSingleSwipe()) {
+            int index = adapter.findOpenSwipeItemPosition();
+            if (index >= 0 && index != position) {
+                return;
+            }
+        }
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 dx = e.getX();
